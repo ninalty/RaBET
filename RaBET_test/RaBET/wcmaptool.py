@@ -108,7 +108,7 @@ class WCMapTool(object):
             if not arcpy.Exists(WCarchivedir):
                 arcpy.AddMessage("WC Dir DNE")
                 arcpy.CreateFolder_management(rootpath, WCarchivedirname)
-            arcpy.CreateFileGDB_management(WCarchivedir, WCarchivegdbname, "10.0")
+            arcpy.management.CreateFileGDB(WCarchivedir, WCarchivegdbname, "10.0") # TL not working
 
         else:
             arcpy.AddMessage("Image archive exists")
@@ -1158,20 +1158,20 @@ class WCMapTool(object):
             metadata.close
 
             if ROIshp is None:
-                arcpy.RasterToGeodatabase_conversion(targetstring, WCarchivegdb)
+                arcpy.RasterToGeodatabase_conversion(targetstring, WCarchivegdb) # fail ERROR 999999
                 metanamearchive = os.path.join(metadir, "meta_" + mlraID + "_" + str(yearID) + ".txt")
                 metaname = os.path.join(outdir, "meta_" + mlraID + "_" + str(yearID) + ".txt")
                 shutil.copy(metaname, metanamearchive)
 
             # Add layer and symbology
-            arcpy.MakeRasterLayer_management(targetstring, wclayertemp, "#", "#", "1")
+            arcpy.management.MakeRasterLayer(targetstring, wclayertemp, "#", "#", "1") #TL
             wcsymbology = os.path.join(tooldatapath, "wcsymbology.lyr")
             arcpy.ApplySymbologyFromLayer_management(wclayertemp, wcsymbology)
-            arcpy.SaveToLayerFile_management(wclayertemp, wclayer, "RELATIVE", "10.1")
+            arcpy.management.SaveToLayerFile(wclayertemp, wclayer, "RELATIVE", "CURRENT") # arcpy.SaveToLayerFile_management(wclayertemp, wclayer, "RELATIVE", "10.1")
 
-            try:
-                mxd = arcpy.mapping.MapDocument("CURRENT")
-                dataFrame = arcpy.mapping.ListDataFrames(mxd, "*")[0]
+            try:  # this trunk is not working.
+                mxd = arcpy.mp.ArcGISProject("CURRENT")
+                dataFrame = mxd.listMaps("*")[0]
                 addlayer = arcpy.mapping.Layer(wclayer)
                 arcpy.mapping.AddLayer(dataFrame, addlayer, "TOP")
                 arcpy.RefreshTOC()
@@ -1344,7 +1344,7 @@ class WCMapTool(object):
             YearsList.append(Yearfullstring)
 
         tempShapeName = os.path.join(outdir, "temp_" + mlraID + "_" + yearID + ".shp")
-        arcpy.CopyFeatures_management(mlradata, tempShapeName)
+        arcpy.management.CopyFeatures(mlradata, tempShapeName) #TL
 
         with arcpy.da.UpdateCursor(tempShapeName, "MLRA_ID") as cursor:
             for row in cursor:
@@ -1352,19 +1352,19 @@ class WCMapTool(object):
                     cursor.deleteRow()
 
         metaShapeName = os.path.join(outdir, "meta_" + mlraID + "_" + yearID + ".shp")
-        arcpy.Sort_management(tempShapeName, metaShapeName, [["Path_Row", "ASCENDING"]])
-        arcpy.Delete_management(tempShapeName)
+        arcpy.management.Sort(tempShapeName, metaShapeName, [["Path_Row", "ASCENDING"]])
+        arcpy.management.Delete(tempShapeName)
 
         FieldNames = [f.name for f in arcpy.ListFields(metaShapeName)]
         DelFields = FieldNames[4:]
         arcpy.AddMessage(" , ".join(DelFields))
 
-        arcpy.AddField_management(metaShapeName, "Img_Dates", "TEXT", "", "", "50", "", "NULLABLE", "")
-        arcpy.AddField_management(metaShapeName, "Num_Dates", "TEXT", "", "", "50", "", "NULLABLE", "")
-        arcpy.AddField_management(metaShapeName, "Img_Years", "TEXT", "", "", "50", "", "NULLABLE", "")
-        arcpy.AddField_management(metaShapeName, "Num_Years", "TEXT", "", "", "50", "", "NULLABLE", "")
+        arcpy.management.AddField(metaShapeName, "Img_Dates", "TEXT", "", "", "50", "", "NULLABLE", "")
+        arcpy.management.AddField(metaShapeName, "Num_Dates", "TEXT", "", "", "50", "", "NULLABLE", "")
+        arcpy.management.AddField(metaShapeName, "Img_Years", "TEXT", "", "", "50", "", "NULLABLE", "")
+        arcpy.management.AddField(metaShapeName, "Num_Years", "TEXT", "", "", "50", "", "NULLABLE", "")
 
-        arcpy.DeleteField_management(metaShapeName, DelFields)
+        arcpy.management.DeleteField(metaShapeName, DelFields)
 
         WRS_Field = []
         # Tiles and DatesList
@@ -1440,10 +1440,10 @@ class WCMapTool(object):
             metalayer = os.path.join(outdir, "meta_MLRA_" + mlraID + "_" + startyear + "_" + endyear)
             # create layer and symbology
 
-            arcpy.MakeFeatureLayer_management(metaShapeName, metalayertemp)
+            arcpy.management.ApplySymbologyFromLayer(metaShapeName, metalayertemp)
             metasymbology = os.path.join(tooldatapath, "MLRA_MetaData_Layer.lyr")
-            arcpy.ApplySymbologyFromLayer_management(metalayertemp, metasymbology)
-            arcpy.SaveToLayerFile_management(metalayertemp, metalayer, "RELATIVE", "10.1")
+            arcpy.management.ApplySymbologyFromLayer(metalayertemp, metasymbology)
+            arcpy.management.SaveToLayerFile(metalayertemp, metalayer, "RELATIVE", "10.1")
 
             # Add data to data frame
             try:
@@ -1476,7 +1476,7 @@ class WCMapTool(object):
                 pass
         PackageOut = wclayer + '.lpk'
         PackageLayers = [addlayer, layer]
-        arcpy.PackageLayer_management(PackageLayers, PackageOut, "PRESERVE", "CONVERT_ARCSDE", "#", "ALL", "ALL",
+        arcpy.management.PackageLayer(PackageLayers, PackageOut, "PRESERVE", "CONVERT_ARCSDE", "#", "ALL", "ALL",
                                       "CURRENT", "#", "RaBETv7", "RaBETv7")
 
         # arcpy.CheckInExtension("Spatial")
