@@ -178,7 +178,7 @@ class RaBETAnalysisTool(object):
         outdirname = "Analysis_" + outname
         outdir = os.path.join(outdirmain, outdirname)
         if not arcpy.Exists(outdir):
-            arcpy.CreateFolder_management(outdirmain, outdirname)
+            arcpy.management.CreateFolder(outdirmain, outdirname) # TL
         else:
             arcpy.AddError("Output directory exists. Please enter a different output name.")
             sys.exit(0)
@@ -217,8 +217,8 @@ class RaBETAnalysisTool(object):
 
         # Copy input shapefile to outputdirectory and create layer in memory
         if method == "Input Shapefile":
-            arcpy.CopyFeatures_management(zoneshp, outshape)
-            arcpy.arcpy.MakeFeatureLayer_management(outshape, zonelayer)
+            arcpy.management.CopyFeatures(zoneshp, outshape)
+            arcpy.management.MakeFeatureLayer(outshape, zonelayer)
 
             if zonename != None:
                 zonefield = zonename
@@ -236,9 +236,9 @@ class RaBETAnalysisTool(object):
         elif method == "Draw Polygon on Map Interactively":
             arcpy.AddMessage("feature set")
 
-            arcpy.CopyFeatures_management(featureset, outshape)
-            arcpy.arcpy.MakeFeatureLayer_management(outshape, zonelayer)
-            arcpy.SaveToLayerFile_management(zonelayer, outlayer)
+            arcpy.management.CopyFeatures(featureset, outshape)
+            arcpy.management.MakeFeatureLayer(outshape, zonelayer)
+            arcpy.management.SaveToLayerFile(zonelayer, outlayer)
 
             fieldnames = [field.name for field in arcpy.ListFields(zonelayer)]
             zonefield = fieldnames[0]  # Set the Zone Field to the first OID field
@@ -249,9 +249,9 @@ class RaBETAnalysisTool(object):
             arcpy.AddMessage("Area of Interest Method Not Supported")
 
         # Add Zone ID field
-        arcpy.AddField_management(zonelayer, "Zone_ID", "TEXT")
+        arcpy.management.AddField(zonelayer, "Zone_ID", "TEXT")
         expression = r"!" + zonefield + r"!"
-        arcpy.CalculateField_management(zonelayer, "Zone_ID", expression, "PYTHON_9.3")
+        arcpy.management.CalculateField(zonelayer, "Zone_ID", expression, "PYTHON_9.3")
 
         # Get geometry of MLRA for intersection check
         firstraster = str(os.path.basename(rasterlist[0]))
@@ -259,7 +259,7 @@ class RaBETAnalysisTool(object):
         arcpy.AddMessage(mlraID)
         expression = """"MLRA_ID" = '{0}'""".format(mlraID)
         cliplayertile = os.path.join("in_memory", "Clip_Layer_" + outname)
-        arcpy.MakeFeatureLayer_management(mlradata, cliplayertile, expression)
+        arcpy.management.MakeFeatureLayer(mlradata, cliplayertile, expression)
 
         # Check for more than one MLRA in WC rasters
         MLRAList = []
@@ -274,9 +274,9 @@ class RaBETAnalysisTool(object):
 
         # Check for intersection of MLRA  boundary and area of interest polygons
         inttest = os.path.join("in_memory", "inttest")
-        arcpy.Intersect_analysis([cliplayertile, zonelayer], inttest)
-        polyrows = int(arcpy.GetCount_management(zonelayer).getOutput(0))
-        rowcount = int(arcpy.GetCount_management(inttest).getOutput(0))
+        arcpy.analysis.Intersect([cliplayertile, zonelayer], inttest)
+        polyrows = int(arcpy.management.GetCount(zonelayer).getOutput(0))
+        rowcount = int(arcpy.management.GetCount(inttest).getOutput(0))
         if rowcount < polyrows:
             arcpy.AddError(
                 "Error subsetting MLRA " + mlraID + "." + "\n" + "Ensure that the area of interest polygons are located inside the MLRA.")
@@ -288,13 +288,13 @@ class RaBETAnalysisTool(object):
         for names in fields:
             fieldnames.append(str(names.name))
         if "RaBET_ID" not in fieldnames:
-            arcpy.AddField_management(zonelayer, "RaBET_ID", "TEXT")
+            arcpy.management.AddField(zonelayer, "RaBET_ID", "TEXT")
 
         if "RaBET_NUM" not in fieldnames:
-            arcpy.AddField_management(zonelayer, "RaBET_NUM", "LONG")
+            arcpy.management.AddField(zonelayer, "RaBET_NUM", "LONG")
 
         if "RaBET_NAME" not in fieldnames:
-            arcpy.AddField_management(zonelayer, "RaBET_NAME", "TEXT")
+            arcpy.management.AddField(zonelayer, "RaBET_NAME", "TEXT")
 
         # create unique zone id with cursor
         cursor = arcpy.UpdateCursor(zonelayer)
@@ -325,7 +325,7 @@ class RaBETAnalysisTool(object):
         tablelist = []
         for index, zones in enumerate(uniquezones):
             expression = """"RaBET_ID" = '{0}'""".format(zones)
-            arcpy.SelectLayerByAttribute_management(zonelayer, "NEW_SELECTION", expression)
+            arcpy.management.SelectLayerByAttribute(zonelayer, "NEW_SELECTION", expression)
 
             namecursor = str([row[0] for row in arcpy.da.SearchCursor(zonelayer, "RaBET_NAME")][0])
 
@@ -340,13 +340,13 @@ class RaBETAnalysisTool(object):
                 try:
 
                     ZonalStatisticsAsTable(zonelayer, "RaBET_ID", rasters, currenttable, datatype, "ALL")
-                    arcpy.AddField_management(currenttable, "CV", "DOUBLE")
+                    arcpy.management.AddField(currenttable, "CV", "DOUBLE")
                     # arcpy.AddField_management(currenttable, "Difference", "DOUBLE")
-                    arcpy.AddField_management(currenttable, "Image", "TEXT")
-                    arcpy.AddField_management(currenttable, "Year", "TEXT")
-                    arcpy.AddField_management(currenttable, "RaBET_Name", "TEXT")
+                    arcpy.management.AddField(currenttable, "Image", "TEXT")
+                    arcpy.management.AddField(currenttable, "Year", "TEXT")
+                    arcpy.management.AddField(currenttable, "RaBET_Name", "TEXT")
 
-                    arcpy.DeleteField_management(currenttable, "ZONE-CODE")
+                    arcpy.management.DeleteField(currenttable, "ZONE-CODE")
 
                     cursor = arcpy.UpdateCursor(currenttable)
                     for row in cursor:
@@ -378,7 +378,7 @@ class RaBETAnalysisTool(object):
 
         for tables in tablelist:
 
-            rowcount = str(int(arcpy.GetCount_management(tables).getOutput(0)))
+            rowcount = str(int(arcpy.management.GetCount(tables).getOutput(0)))
 
             if rowcount != '1':
                 removetables.append(tables)
@@ -397,16 +397,16 @@ class RaBETAnalysisTool(object):
         if field.name not in allfieldslist:
             fieldMappings.removeFieldMap(fieldMappings.findFieldMapIndex(field.name))
 
-        arcpy.Merge_management(tablelist, outtable, fieldMappings)
+        arcpy.management.Merge(tablelist, outtable, fieldMappings)
 
         meanvalues = []
         differencevalues = []
         titlevalues = []
 
         templayer = outname + "_polygons"
-        arcpy.MakeFeatureLayer_management(outshape, templayer)
-        arcpy.SaveToLayerFile_management(templayer, outlayer, "RELATIVE")
-        arcpy.Delete_management(zonelayer)
+        arcpy.management.MakeFeatureLayer(outshape, templayer)
+        arcpy.management.SaveToLayerFile(templayer, outlayer, "RELATIVE")
+        arcpy.management.Delete(zonelayer)
 
         # Calculate difference
         for zones in uniquezones:
@@ -439,7 +439,7 @@ class RaBETAnalysisTool(object):
             try:
                 arcpy.AddMessage("\n" + "Exporting Excel spreadsheet." + "\n")
                 excelout = os.path.join(outdir, outname + ".xls")
-                arcpy.TableToExcel_conversion(outtable, excelout)
+                arcpy.conversion.TableToExcel(outtable, excelout)
             except:
                 arcpy.AddError("Error exporting Excel spreadsheet.")
                 pass
@@ -454,9 +454,9 @@ class RaBETAnalysisTool(object):
 
                     expression = """"RaBET_ID" = '{0}'""".format(zones)
                     tview = os.path.join("in_memory", arcpy.CreateUniqueName("tv"))
-                    arcpy.MakeTableView_management(outtable, tview, expression)
+                    arcpy.management.MakeTableView(outtable, tview, expression)
                     expression = """"RaBET_ID" = '{0}'""".format(zones)
-                    # yearcount = str(int(arcpy.GetCount_management(tview).getOutput(0)))
+                    # yearcount = str(int(arcpy.management.GetCount(tview).getOutput(0)))
                     try:
                         title = str([row[0] for row in arcpy.da.SearchCursor(tview, "RaBET_NAME", expression)][0])
 
@@ -515,10 +515,10 @@ class RaBETAnalysisTool(object):
             arcpy.AddMessage("\n" + "Number of polygons exceeds threshold of " + str(
                 zonethresh) + "." + "\n" + "Charts will not be displayed, but were saved to output directory." + "\n" + "\n")
 
-        arcpy.Delete_management("in_memory")
+        arcpy.management.Delete("in_memory")
 
         dropFields = ["Zone_ID", "RaBET_ID", "RaBET_NUM"]
-        arcpy.DeleteField_management(outlayer, dropFields)
+        arcpy.management.DeleteField(outlayer, dropFields)
 
         # Add polgons to the data frame
         try:
