@@ -1,5 +1,7 @@
 # RaBET
 
+update from python 2.7 to 3.0
+
 Use Landsat Collection 2
 
 Increase computational efficiency
