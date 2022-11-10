@@ -1,6 +1,8 @@
-import arcpy
+from arcpy.sa import *
 import os
 import sys
+import arcpy
+import webbrowser
 
 class RaBETAnalysisTool(object):
     def __init__(self):
@@ -110,7 +112,6 @@ class RaBETAnalysisTool(object):
         """Modify the values and properties of parameters before internal
         validation is performed.  This method is called whenever a parameter
         has been changed."""
-        import arcpy
 
         if str(parameters[3].value) == "Input Shapefile":
             parameters[4].enabled = "false"
@@ -131,7 +132,7 @@ class RaBETAnalysisTool(object):
             parameters[4].enabled = "true"
             parameters[5].enabled = "false"
             parameters[6].enabled = "false"
-            # parameters[4].value = os.path.join(sys.path[0], "tooldata","UI.lyr")
+            # parameters[4].value = os.path.join(sys.path[0], "tooldata","UI.lyrx")
             parameters[5].value = os.path.join(sys.path[0], "tooldata", "UI.shp")
 
         return
@@ -147,18 +148,6 @@ class RaBETAnalysisTool(object):
         # Version and update information
         version = "1.0"
         modified = r"4/27/2016"
-
-        # Import modules
-        import os
-        import time
-        import sys
-        import re, locale
-        import arcpy
-        import glob
-        import webbrowser
-        from operator import itemgetter
-        from arcpy import env
-        from arcpy.sa import *
 
         # Define input parameters
         rasterstring = parameters[0].valueAsText.replace("'", "")
@@ -211,7 +200,7 @@ class RaBETAnalysisTool(object):
         outtable = os.path.join(outdir, outtablename)  # Table output name
         outshapename = outname + "_polygons"
         outshape = os.path.join(outdir, outshapename + ".shp")
-        outlayer = os.path.join(outdir, outshapename + ".lyr")
+        outlayer = os.path.join(outdir, outshapename + ".lyrx")
         zonelayer = os.path.join("in_memory", outname + "_zonelayer")
         zonethresh = 10  # max number of graphs that can dispayed before visualization is disabled.
 
@@ -492,11 +481,11 @@ class RaBETAnalysisTool(object):
                         graph.graphPropsGeneral.title = title
 
                         # Output a graph, which is created in-memory
-                        arcpy.MakeGraph_management(graphtemplate, graph, graphname)
+                        arcpy.management.MakeGraph(graphtemplate, graph, graphname)
 
                         # Save the graph as an image
                         if not os.path.isfile(graphimage):
-                            arcpy.SaveGraph_management(graphname, graphimage, "MAINTAIN_ASPECT_RATIO", "600", "375")
+                            arcpy.management.SaveGraph(graphname, graphimage, "MAINTAIN_ASPECT_RATIO", "600", "375")
 
                         else:
                             arcpy.AddWarning(graphimage + " already exists." + "\n" + "File not saved.")
@@ -522,10 +511,10 @@ class RaBETAnalysisTool(object):
 
         # Add polgons to the data frame
         try:
-            mxd = arcpy.mapping.MapDocument("CURRENT")
-            dataFrame = arcpy.mapping.ListDataFrames(mxd, "*")[0]
-            addlayer = arcpy.mapping.Layer(outlayer)
-            arcpy.mapping.AddLayer(dataFrame, addlayer)
+            mxd = arcpy.mp.MapDocument("CURRENT")
+            dataFrame = mxd.listMaps("*")[0]
+            addlayer = arcpy.mp.LayerFile(outlayer)
+            dataFrame.AddLayer(addlayer)
             # addlayer.labelClasses[0].expression = "[RaBET_NAME]"
             # addlayer.showLabels = True
             arcpy.RefreshActiveView()

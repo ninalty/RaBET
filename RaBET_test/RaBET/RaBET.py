@@ -17,6 +17,7 @@ import shutil
 from operator import itemgetter
 from arcpy import env
 from arcpy.sa import *
+import webbrowser
 
 class Toolbox(object):
     def __init__(self):
@@ -28,14 +29,12 @@ class Toolbox(object):
         # List of tool classes associated with this toolbox
         self.tools = [WCMapTool, RaBETAnalysisTool]
 
-
 class WCMapTool(object):
     def __init__(self):
         """Define the tool (tool name is the name of the class)."""
         self.label = "Generate WC Maps"
         self.description = "This tool produces woody canopy cover maps from Landsat multispectral imagery for a given MLRA"
         self.canRunInBackground = False
-
     def getParameterInfo(self):
         """Define parameter definitions"""
 
@@ -58,7 +57,7 @@ class WCMapTool(object):
         # Set a value list of MLRA Names
         param1.filter.type = "ValueList"
         param1.filter.list = []
-        # param1.filter.list = ['41']
+        #param1.filter.list = ['41']
 
         # Third parameter
         param2 = arcpy.Parameter(
@@ -70,7 +69,7 @@ class WCMapTool(object):
 
         # Set a value list of available image years
         param2.filter.type = "ValueList"
-        # param2.filter.list = ['1984','1985','1986','1987','1988','1989','1990','1991','1992','1993','1994','1995','1996','1997','1998','1999','2000','2001','2002','2003','2004','2005','2006','2007','2008','2009','2010','2011','2011','2012','2013','2014','2015','2016','2017']
+        #param2.filter.list = ['1984','1985','1986','1987','1988','1989','1990','1991','1992','1993','1994','1995','1996','1997','1998','1999','2000','2001','2002','2003','2004','2005','2006','2007','2008','2009','2010','2011','2011','2012','2013','2014','2015','2016','2017']
         param2.filter.list = []
 
         # Fourth parameter
@@ -80,6 +79,7 @@ class WCMapTool(object):
             datatype="DEFolder",
             parameterType="Required",
             direction="Input")
+
 
         # Fifth parameter
         param4 = arcpy.Parameter(
@@ -101,9 +101,10 @@ class WCMapTool(object):
         """Modify the values and properties of parameters before internal
         validation is performed.  This method is called whenever a parameter
         has been changed."""
+        import os
 
-        StartYear = 1987  # Earliest Image year selectable for input
-        CompLength = 4  # Number of years used in image composition
+        StartYear = 1987 # Earliest Image year selectable for input
+        CompLength = 4 # Number of years used in image composition
 
         if parameters[0].altered:
             rootpath = sys.path[0]
@@ -117,9 +118,11 @@ class WCMapTool(object):
             subdirs = [row for row in subdirs if len(str(row)) > 30]
 
         if parameters[1].altered:
+
             year = sorted(set([x[10:14] for x in subdirs]))
             MinYear = StartYear
             CompYears = [i for i in year if int(i) >= MinYear]
+
 
             parameters[2].filter.list = CompYears
 
@@ -129,18 +132,15 @@ class WCMapTool(object):
         """Modify the messages created by internal validation for each tool
         parameter.  This method is called after internal validation."""
         return
-
     def execute(self, parameters, messages):
         """The source code of the tool."""
 
-
-
         # Version and update information
         version = "RaBET 6.0 demo"
-        modified = r"03/09/2018"
+        modified = r"11/03/2022"
         executiontime = datetime.datetime.now().strftime("%I:%M%p on %B %d, %Y")
 
-        # Define input parameters
+        # Define input parameters # NL change when run in arcgis
         imagedir = parameters[0].valueAsText  # Landsat image directory
         mlraID = parameters[1].valueAsText  # MLRA name/ID
         yearID = str(parameters[2].valueAsText)  # Year to process
@@ -163,7 +163,7 @@ class WCMapTool(object):
             pass
 
         # Determine directories containg Python toolbox and reource data
-        rootpath = sys.path[0]
+        rootpath = sys.path[0] #'C:\\Users\\ninal\\Documents\\postdoc UCDavis\\RaBET-main'
         tooldatapath = os.path.join(rootpath, r"ToolData")
         mlradata = os.path.join(tooldatapath, r"MLRA_Data.shp")
         scratchdirname = "scratch"
@@ -224,7 +224,7 @@ class WCMapTool(object):
             if not arcpy.Exists(WCarchivedir):
                 arcpy.AddMessage("WC Dir DNE")
                 arcpy.CreateFolder_management(rootpath, WCarchivedirname)
-            arcpy.CreateFileGDB_management(WCarchivedir, WCarchivegdbname, "10.0")
+            arcpy.management.CreateFileGDB(WCarchivedir, WCarchivegdbname, "10.0") # TL not working
 
         else:
             arcpy.AddMessage("Image archive exists")
@@ -281,12 +281,12 @@ class WCMapTool(object):
             subdirs = os.listdir(imagedir)
             subdirs = [row for row in subdirs if len(str(row)) > 30]  # Check if filename is at least 30 characters long
 
-            # Parse variables from directory strings
-            pathrows = [x[4:10] for x in subdirs]
-            years = [x[10:14] for x in subdirs]
+            # Parse variables from directory strings # TL
+            pathrows = [x[10:16] for x in subdirs] # [x[4:10] for x in subdirs]
+            years = [x[17:21] for x in subdirs]
 
-            months = [x[14:16] for x in subdirs]
-            days = [x[16:18] for x in subdirs]
+            months = [x[21:23] for x in subdirs]
+            days = [x[23:25] for x in subdirs]
 
             # Calculate DOY from day month year
             DOYs = []
@@ -319,7 +319,7 @@ class WCMapTool(object):
             availableimagenum = len(availableimages)
 
             # Set of Unique Landsat tiles with available images in region of interest
-            uniquetiles = sorted(set([subdirs[row][4:10] for row in indexintersection]))
+            uniquetiles = sorted(set([subdirs[row][10:16] for row in indexintersection])) # TL [4,10]
             numbertiles = len(uniquetiles)
 
             # create metadata text file
@@ -395,14 +395,14 @@ class WCMapTool(object):
                     totalstarttime = time.time()
 
                     # Define variables from Landsat directory string
-                    currentpathrow = images[4:10]  # path/row of current image in loop
-                    currentimagename = images[0:20]
+                    currentpathrow = images[10:16]  #TL path/row of current image in loop
+                    currentimagename = images[0:40]
                     satellite = images[3:4]
-                    pathname = images[5:7]
-                    rowname = images[8:10]
-                    month = images[14:16]
-                    day = images[16:18]
-                    year = images[10:14]
+                    pathname = images[11:13]
+                    rowname = images[14:16]
+                    month = images[21:23]
+                    day = images[23:25]
+                    year = images[17:21]
 
                     DOY = str(datetime.date(int(year), int(month), int(day)).timetuple().tm_yday)
 
@@ -412,14 +412,14 @@ class WCMapTool(object):
                         imagenum = imindex + 1
                         arcpy.AddMessage("\n" + "Processing image " + str(imagenum) + " of " + str(
                             availableimagenum) + ": " + images + "\n")
-                        currentimagedir = os.path.join(imagedir, images)
+                        currentimagedir = imagedir # currentimagedir = os.path.join(imagedir, images.split('.')[0]) #TL
 
                         # Cloud Cover Screening
 
                         processstarttime = time.time()
 
                         # Load cloud mask image from current directory as raster
-                        cfmask = glob.glob(currentimagedir + '\\*pixel_qa.tif')
+                        cfmask = glob.glob(currentimagedir + '\\*pixel_qa.tif') #TL
                         cloudraster = arcpy.Raster(cfmask[0])
 
                         # Define projection to current cloud mask image
@@ -464,7 +464,7 @@ class WCMapTool(object):
                         clipenvelopetile = os.path.join("in_memory", "Clip_Envelope_" + currentpathrow)
                         arcpy.FeatureEnvelopeToPolygon_management(cliplayertile, clipenvelopetile, "SINGLEPART")
                         desccliptile = arcpy.Describe(clipenvelopetile)
-                        extentcliptile = str(desccliptile.extent).translate(None, 'NaN')
+                        extentcliptile = str(desccliptile.extent).translate({None: 'NaN'}) #TL str(desccliptile.extent).translate(None, 'NaN') # don't understand
 
                         # Define geometry parameters for subset region if it exists
                         if ROIexist:
@@ -585,8 +585,6 @@ class WCMapTool(object):
                                 cloudthresh[0]) + r"%.")
                             metadata.write("    " + images + " - Excluded - Total disturbed pixels: " + str(
                                 int(round(totaldisturbedpercent))) + "%. " + "\n")
-
-
 
                         # Begin vegetation index processing
                         else:
@@ -744,7 +742,7 @@ class WCMapTool(object):
                                     int(round(totaldisturbedpercent))) + "%. " + "\n")
                             arcpy.Delete_management(cloudrasterRecl)
 
-                        break
+                        break # super slow
 
                 # Calculate woody canopy cover if images exist
                 if filteredimages:
@@ -1257,7 +1255,7 @@ class WCMapTool(object):
 
             # Updated 2021/04/02
             # arcpy.Mosaic_management(inputstring,targetstring,mosaicmethod,mosaicmethod,"", "255", "", "", "")
-            arcpy.MosaicToNewRaster_management(input_rasters=inputstring, output_location=outdir,
+            arcpy.management.MosaicToNewRaster(input_rasters=inputstring, output_location=outdir,
                                                raster_dataset_name_with_extension=wcmosaic, pixel_type="8_BIT_UNSIGNED",
                                                mosaic_method=mosaicmethod, number_of_bands=1)
             arcpy.AddMessage("Mosaic created using method: " + mosaicmethod)
@@ -1274,22 +1272,22 @@ class WCMapTool(object):
             metadata.close
 
             if ROIshp is None:
-                arcpy.RasterToGeodatabase_conversion(targetstring, WCarchivegdb)
+                arcpy.conversion.RasterToGeodatabase(targetstring, WCarchivegdb) # fail ERROR 999999
                 metanamearchive = os.path.join(metadir, "meta_" + mlraID + "_" + str(yearID) + ".txt")
                 metaname = os.path.join(outdir, "meta_" + mlraID + "_" + str(yearID) + ".txt")
                 shutil.copy(metaname, metanamearchive)
 
             # Add layer and symbology
-            arcpy.MakeRasterLayer_management(targetstring, wclayertemp, "#", "#", "1")
+            arcpy.management.MakeRasterLayer(targetstring, wclayertemp, "#", "#", "1") #TL
             wcsymbology = os.path.join(tooldatapath, "wcsymbology.lyr")
-            arcpy.ApplySymbologyFromLayer_management(wclayertemp, wcsymbology)
-            arcpy.SaveToLayerFile_management(wclayertemp, wclayer, "RELATIVE", "10.1")
+            arcpy.management.ApplySymbologyFromLayer(wclayertemp, wcsymbology)
+            arcpy.management.SaveToLayerFile(wclayertemp, wclayer, "RELATIVE", "CURRENT") # arcpy.SaveToLayerFile_management(wclayertemp, wclayer, "RELATIVE", "10.1")
 
-            try:
-                mxd = arcpy.mapping.MapDocument("CURRENT")
-                dataFrame = arcpy.mapping.ListDataFrames(mxd, "*")[0]
-                addlayer = arcpy.mapping.Layer(wclayer)
-                arcpy.mapping.AddLayer(dataFrame, addlayer, "TOP")
+            try:  # this trunk is not working.
+                mxd = arcpy.mp.ArcGISProject("CURRENT")
+                dataFrame = mxd.listMaps("*")[0]
+                addlayer = arcpy.mp.LayerFile(wclayer)
+                dataFrame.addLayer(addlayer, 'TOP')
                 arcpy.RefreshTOC()
                 arcpy.RefreshActiveView()
             except:
@@ -1311,7 +1309,7 @@ class WCMapTool(object):
 
                 wcmosaic = "WC_MLRA_" + mlraID + "_" + startyear + "_" + endyear + ".tif"
                 wcmosaicout = os.path.join(outdir, wcmosaic)
-                arcpy.CopyRaster_management(WCarchiveimage, wcmosaicout)
+                arcpy.management.CopyRaster(WCarchiveimage, wcmosaicout)
 
                 wclayertemp = os.path.join("WC_MLRA_" + mlraID + "_" + startyear + "_" + endyear)
                 wclayer = os.path.join(outdir, "WC_MLRA_" + mlraID + "_" + startyear + "_" + endyear)
@@ -1319,9 +1317,6 @@ class WCMapTool(object):
                 metanamearchive = os.path.join(metadir, "meta_" + mlraID + "_" + str(yearID) + ".txt")
                 metaname = os.path.join(outdir, "meta_" + mlraID + "_" + str(yearID) + ".txt")
                 shutil.copy(metanamearchive, metaname)
-
-
-
 
             # subset image if region of interest exists
             else:
@@ -1353,7 +1348,7 @@ class WCMapTool(object):
 
                 inttest = os.path.join("in_memory", "inttest")
                 arcpy.Intersect_analysis([mlradata, ROIshp], inttest)
-                rowcount = int(arcpy.GetCount_management(inttest).getOutput(0))
+                rowcount = int(arcpy.management.GetCount(inttest).getOutput(0))
 
                 if rowcount == 0:
                     arcpy.AddError(
@@ -1362,44 +1357,44 @@ class WCMapTool(object):
                 else:
 
                     mlradataROI = os.path.join("in_memory", "MLRA_Data_ROI")
-                    arcpy.Clip_analysis(mlradata, ROIshp, mlradataROI)
+                    arcpy.analysis.Clip(mlradata, ROIshp, mlradataROI)
                     cliplayerROI = os.path.join("in_memory", "Clip_Layer")
 
                     arcpy.MakeFeatureLayer_management(mlradataROI, cliplayerROI)
 
                     clipenvelopeROI = os.path.join("in_memory", "Clip_Envelope")
-                    arcpy.FeatureEnvelopeToPolygon_management(cliplayerROI, clipenvelopeROI, "SINGLEPART")
+                    arcpy.management.FeatureEnvelopeToPolygon(cliplayerROI, clipenvelopeROI, "SINGLEPART")
                     descclipROI = arcpy.Describe(clipenvelopeROI)
                     extentclipROI = str(descclipROI.extent).translate(None, 'NaN')
 
-                    arcpy.Clip_management(WCarchiveimage, extentclipROI, wcmosaicout, cliplayerROI, "255",
+                    arcpy.management.Clip(WCarchiveimage, extentclipROI, wcmosaicout, cliplayerROI, "255",
                                           "ClippingGeometry", "NO_MAINTAIN_EXTENT")
             # Check for no data images
             try:
-                MaxWCResult = arcpy.GetRasterProperties_management(wcmosaicout, "MAXIMUM")
+                MaxWCResult = arcpy.management.GetRasterProperties(wcmosaicout, "MAXIMUM")
                 MaxWC = MaxWCResult.getOutput(0)
                 arcpy.AddMessage("Max WC is: " + MaxWC)
                 DataExists = True
             except Exception:
                 DataExists = False
                 arcpy.AddWarning("Subset area contains no data.")
-                arcpy.Delete_management(wcmosaicout)
+                arcpy.management.Delete(wcmosaicout)
                 arcpy.AddWarning("No image was produced.")
                 pass
 
             # create layer and symbology
             if DataExists == True:
-                arcpy.MakeRasterLayer_management(wcmosaicout, wclayertemp, "#", "#", "1")
-                wcsymbology = os.path.join(tooldatapath, "wcsymbology.lyr")
-                arcpy.ApplySymbologyFromLayer_management(wclayertemp, wcsymbology)
-                arcpy.SaveToLayerFile_management(wclayertemp, wclayer, "RELATIVE", "10.1")
+                arcpy.management.MakeRasterLayer(wcmosaicout, wclayertemp, "#", "#", "1")
+                wcsymbology = os.path.join(tooldatapath, "wcsymbology.lyrx")
+                arcpy.management.ApplySymbologyFromLayer(wclayertemp, wcsymbology)
+                arcpy.management.SaveToLayerFile(wclayertemp, wclayer, "RELATIVE", "CURRENT")
 
                 # Add data to data frame
                 try:
-                    mxd = arcpy.mapping.MapDocument("CURRENT")
-                    dataFrame = arcpy.mapping.ListDataFrames(mxd, "*")[0]
-                    addlayer = arcpy.mapping.Layer(wclayer + ".lyr")
-                    arcpy.mapping.AddLayer(dataFrame, addlayer, "TOP")
+                    mxd = arcpy.mp.MapDocument("CURRENT")
+                    dataFrame = mxd.listMaps("*")[0]
+                    addlayer = arcpy.mp.LayerFile(wclayer + ".lyrx")
+                    dataFrame.addLayer(addlayer, 'TOP')  # arcpy.mp.AddLayer(dataFrame, addlayer, "TOP")
                     arcpy.RefreshTOC()
                     arcpy.RefreshActiveView()
                 except:
@@ -1460,7 +1455,7 @@ class WCMapTool(object):
             YearsList.append(Yearfullstring)
 
         tempShapeName = os.path.join(outdir, "temp_" + mlraID + "_" + yearID + ".shp")
-        arcpy.CopyFeatures_management(mlradata, tempShapeName)
+        arcpy.management.CopyFeatures(mlradata, tempShapeName)  # TL
 
         with arcpy.da.UpdateCursor(tempShapeName, "MLRA_ID") as cursor:
             for row in cursor:
@@ -1468,19 +1463,19 @@ class WCMapTool(object):
                     cursor.deleteRow()
 
         metaShapeName = os.path.join(outdir, "meta_" + mlraID + "_" + yearID + ".shp")
-        arcpy.Sort_management(tempShapeName, metaShapeName, [["Path_Row", "ASCENDING"]])
-        arcpy.Delete_management(tempShapeName)
+        arcpy.management.Sort(tempShapeName, metaShapeName, [["Path_Row", "ASCENDING"]])
+        arcpy.management.Delete(tempShapeName)
 
         FieldNames = [f.name for f in arcpy.ListFields(metaShapeName)]
         DelFields = FieldNames[4:]
         arcpy.AddMessage(" , ".join(DelFields))
 
-        arcpy.AddField_management(metaShapeName, "Img_Dates", "TEXT", "", "", "50", "", "NULLABLE", "")
-        arcpy.AddField_management(metaShapeName, "Num_Dates", "TEXT", "", "", "50", "", "NULLABLE", "")
-        arcpy.AddField_management(metaShapeName, "Img_Years", "TEXT", "", "", "50", "", "NULLABLE", "")
-        arcpy.AddField_management(metaShapeName, "Num_Years", "TEXT", "", "", "50", "", "NULLABLE", "")
+        arcpy.management.AddField(metaShapeName, "Img_Dates", "TEXT", "", "", "50", "", "NULLABLE", "")
+        arcpy.management.AddField(metaShapeName, "Num_Dates", "TEXT", "", "", "50", "", "NULLABLE", "")
+        arcpy.management.AddField(metaShapeName, "Img_Years", "TEXT", "", "", "50", "", "NULLABLE", "")
+        arcpy.management.AddField(metaShapeName, "Num_Years", "TEXT", "", "", "50", "", "NULLABLE", "")
 
-        arcpy.DeleteField_management(metaShapeName, DelFields)
+        arcpy.management.DeleteField(metaShapeName, DelFields)
 
         WRS_Field = []
         # Tiles and DatesList
@@ -1556,19 +1551,19 @@ class WCMapTool(object):
             metalayer = os.path.join(outdir, "meta_MLRA_" + mlraID + "_" + startyear + "_" + endyear)
             # create layer and symbology
 
-            arcpy.MakeFeatureLayer_management(metaShapeName, metalayertemp)
-            metasymbology = os.path.join(tooldatapath, "MLRA_MetaData_Layer.lyr")
-            arcpy.ApplySymbologyFromLayer_management(metalayertemp, metasymbology)
-            arcpy.SaveToLayerFile_management(metalayertemp, metalayer, "RELATIVE", "10.1")
+            arcpy.management.MakeFeatureLayer(metaShapeName, metalayertemp)
+            metasymbology = os.path.join(tooldatapath, "MLRA_MetaData_Layer.lyrx")
+            arcpy.management.ApplySymbologyFromLayer(metalayertemp, metasymbology)
+            arcpy.management.SaveToLayerFile(metalayertemp, metalayer, "RELATIVE", "CURRENT")
 
             # Add data to data frame
             try:
-                mxd = arcpy.mapping.MapDocument("CURRENT")
-                dataFrame = arcpy.mapping.ListDataFrames(mxd, "*")[0]
-                newlayer = arcpy.mapping.Layer(metalayer + ".lyr")
-                arcpy.mapping.AddLayer(dataFrame, newlayer, "TOP")
+                mxd = arcpy.mp.MapDocument("CURRENT")
+                dataFrame = mxd.ListDataFrames("*")[0]
+                newlayer = arcpy.mp.LayerFile(metalayer + ".lyrx")
+                dataFrame.addLayer(addlayer, 'TOP')  # arcpy.mp.AddLayer(dataFrame, newlayer, "TOP")
 
-                layer = arcpy.mapping.ListLayers(mxd, "")[0]
+                layer = arcpy.mp.ListLayers(mxd, "")[0]
                 arcpy.AddMessage(layer)
                 if layer.supports("LABELCLASSES"):
                     for lblclass in layer.labelClasses:
@@ -1592,7 +1587,7 @@ class WCMapTool(object):
                 pass
         PackageOut = wclayer + '.lpk'
         PackageLayers = [addlayer, layer]
-        arcpy.PackageLayer_management(PackageLayers, PackageOut, "PRESERVE", "CONVERT_ARCSDE", "#", "ALL", "ALL",
+        arcpy.management.PackageLayer(PackageLayers, PackageOut, "PRESERVE", "CONVERT_ARCSDE", "#", "ALL", "ALL",
                                       "CURRENT", "#", "RaBETv7", "RaBETv7")
 
         # arcpy.CheckInExtension("Spatial")
@@ -1602,9 +1597,7 @@ class WCMapTool(object):
                 endyear) + "." + "\n")
         return
 
-
 ####################################################### Next Tool
-
 
 class RaBETAnalysisTool(object):
     def __init__(self):
@@ -1613,6 +1606,102 @@ class RaBETAnalysisTool(object):
         self.description = "This tool calculates zonal statistics for user-defined zones and produces data charts for change detection analysis."
         self.canRunInBackground = False
 
+    def getParameterInfo(self):
+        """Define parameter definitions"""
+
+        param0 = arcpy.Parameter(
+            displayName="Input Woody Canopy Cover Rasters",
+            name="rasterstring",
+            datatype="DERasterDataset",
+            parameterType="Required",
+            direction="Input",
+            multiValue=True)
+
+        param1 = arcpy.Parameter(
+            displayName="Output Directory",
+            name="outdir",
+            datatype="DEWorkspace",
+            parameterType="Required",
+            direction="Input")
+
+        param2 = arcpy.Parameter(
+            displayName="Output Name",
+            name="outname",
+            datatype="GPString",
+            parameterType="Required",
+            direction="Input")
+
+        param3 = arcpy.Parameter(
+            displayName="Area of Interest Input Method",
+            name="method",
+            datatype="GPString",
+            parameterType="Required",
+            direction="Input")
+        param3.filter.type = "ValueList"
+        param3.filter.list = ["Input Shapefile", "Draw Polygon on Map Interactively"]
+
+        param4 = arcpy.Parameter(
+            displayName="Draw Polygon Interactively",
+            name="Draw Polygon",
+            datatype="GPFeatureRecordSetLayer",
+            parameterType="Required",
+
+            direction="Input")
+        param4.enabled = "false"
+        param4.value = os.path.join(sys.path[0], "tooldata", "UI.shp")
+        # param3.filter.type = "ValueList"
+        # param3.filter.list = []
+
+        param5 = arcpy.Parameter(
+            displayName="Area of Interest Shapefile",
+            name="ROIshp",
+            datatype="DEShapefile",
+            parameterType="Required",
+            direction="Input")
+        param5.enabled = "false"
+
+        param6 = arcpy.Parameter(
+            displayName="Area of Interest Field Name",
+            name="zonenamefield",
+            datatype="GPString",
+            parameterType="Optional",
+            direction="Input")
+        param6.enabled = "false"
+
+        param6.filter.type = "ValueList"
+        param6.filter.list = []
+
+        param7 = arcpy.Parameter(
+            displayName="Chart Output of Mean Woody Canopy Cover",
+            name="chartmetric",
+            datatype="GPBoolean",
+            parameterType="Required",
+            direction="Input")
+        param7.value = "true"
+
+        param8 = arcpy.Parameter(
+            displayName="Output Excel Spreadsheet",
+            name="excelfile",
+            datatype="GPBoolean",
+            parameterType="Required",
+            direction="Input")
+        param8.value = "true"
+
+        param9 = arcpy.Parameter(
+            displayName="Ignore NoData in Calculations",
+            name="nodata",
+            datatype="GPBoolean",
+            parameterType="Required",
+            direction="Input")
+        param9.value = "true"
+
+        params = [param0, param1, param2, param3, param4, param5, param6, param7, param8, param9]
+
+        return params
+
+    def isLicensed(self):
+        """Set whether tool is licensed to execute."""
+        return True
 
     def updateParameters(self, parameters):
         """Modify the values and properties of parameters before internal
@@ -1638,7 +1727,7 @@ class RaBETAnalysisTool(object):
             parameters[4].enabled = "true"
             parameters[5].enabled = "false"
             parameters[6].enabled = "false"
-            # parameters[4].value = os.path.join(sys.path[0], "tooldata","UI.lyr")
+            # parameters[4].value = os.path.join(sys.path[0], "tooldata","UI.lyrx")
             parameters[5].value = os.path.join(sys.path[0], "tooldata", "UI.shp")
 
         return
@@ -1654,18 +1743,6 @@ class RaBETAnalysisTool(object):
         # Version and update information
         version = "1.0"
         modified = r"4/27/2016"
-
-        # Import modules
-        import os
-        import time
-        import sys
-        import re, locale
-        import arcpy
-        import glob
-        import webbrowser
-        from operator import itemgetter
-        from arcpy import env
-        from arcpy.sa import *
 
         # Define input parameters
         rasterstring = parameters[0].valueAsText.replace("'", "")
@@ -1685,7 +1762,7 @@ class RaBETAnalysisTool(object):
         outdirname = "Analysis_" + outname
         outdir = os.path.join(outdirmain, outdirname)
         if not arcpy.Exists(outdir):
-            arcpy.CreateFolder_management(outdirmain, outdirname)
+            arcpy.management.CreateFolder(outdirmain, outdirname) # TL
         else:
             arcpy.AddError("Output directory exists. Please enter a different output name.")
             sys.exit(0)
@@ -1718,14 +1795,14 @@ class RaBETAnalysisTool(object):
         outtable = os.path.join(outdir, outtablename)  # Table output name
         outshapename = outname + "_polygons"
         outshape = os.path.join(outdir, outshapename + ".shp")
-        outlayer = os.path.join(outdir, outshapename + ".lyr")
+        outlayer = os.path.join(outdir, outshapename + ".lyrx")
         zonelayer = os.path.join("in_memory", outname + "_zonelayer")
         zonethresh = 10  # max number of graphs that can dispayed before visualization is disabled.
 
         # Copy input shapefile to outputdirectory and create layer in memory
         if method == "Input Shapefile":
-            arcpy.CopyFeatures_management(zoneshp, outshape)
-            arcpy.arcpy.MakeFeatureLayer_management(outshape, zonelayer)
+            arcpy.management.CopyFeatures(zoneshp, outshape)
+            arcpy.management.MakeFeatureLayer(outshape, zonelayer)
 
             if zonename != None:
                 zonefield = zonename
@@ -1743,9 +1820,9 @@ class RaBETAnalysisTool(object):
         elif method == "Draw Polygon on Map Interactively":
             arcpy.AddMessage("feature set")
 
-            arcpy.CopyFeatures_management(featureset, outshape)
-            arcpy.arcpy.MakeFeatureLayer_management(outshape, zonelayer)
-            arcpy.SaveToLayerFile_management(zonelayer, outlayer)
+            arcpy.management.CopyFeatures(featureset, outshape)
+            arcpy.management.MakeFeatureLayer(outshape, zonelayer)
+            arcpy.management.SaveToLayerFile(zonelayer, outlayer)
 
             fieldnames = [field.name for field in arcpy.ListFields(zonelayer)]
             zonefield = fieldnames[0]  # Set the Zone Field to the first OID field
@@ -1756,9 +1833,9 @@ class RaBETAnalysisTool(object):
             arcpy.AddMessage("Area of Interest Method Not Supported")
 
         # Add Zone ID field
-        arcpy.AddField_management(zonelayer, "Zone_ID", "TEXT")
+        arcpy.management.AddField(zonelayer, "Zone_ID", "TEXT")
         expression = r"!" + zonefield + r"!"
-        arcpy.CalculateField_management(zonelayer, "Zone_ID", expression, "PYTHON_9.3")
+        arcpy.management.CalculateField(zonelayer, "Zone_ID", expression, "PYTHON_9.3")
 
         # Get geometry of MLRA for intersection check
         firstraster = str(os.path.basename(rasterlist[0]))
@@ -1766,7 +1843,7 @@ class RaBETAnalysisTool(object):
         arcpy.AddMessage(mlraID)
         expression = """"MLRA_ID" = '{0}'""".format(mlraID)
         cliplayertile = os.path.join("in_memory", "Clip_Layer_" + outname)
-        arcpy.MakeFeatureLayer_management(mlradata, cliplayertile, expression)
+        arcpy.management.MakeFeatureLayer(mlradata, cliplayertile, expression)
 
         # Check for more than one MLRA in WC rasters
         MLRAList = []
@@ -1781,9 +1858,9 @@ class RaBETAnalysisTool(object):
 
         # Check for intersection of MLRA  boundary and area of interest polygons
         inttest = os.path.join("in_memory", "inttest")
-        arcpy.Intersect_analysis([cliplayertile, zonelayer], inttest)
-        polyrows = int(arcpy.GetCount_management(zonelayer).getOutput(0))
-        rowcount = int(arcpy.GetCount_management(inttest).getOutput(0))
+        arcpy.analysis.Intersect([cliplayertile, zonelayer], inttest)
+        polyrows = int(arcpy.management.GetCount(zonelayer).getOutput(0))
+        rowcount = int(arcpy.management.GetCount(inttest).getOutput(0))
         if rowcount < polyrows:
             arcpy.AddError(
                 "Error subsetting MLRA " + mlraID + "." + "\n" + "Ensure that the area of interest polygons are located inside the MLRA.")
@@ -1795,13 +1872,13 @@ class RaBETAnalysisTool(object):
         for names in fields:
             fieldnames.append(str(names.name))
         if "RaBET_ID" not in fieldnames:
-            arcpy.AddField_management(zonelayer, "RaBET_ID", "TEXT")
+            arcpy.management.AddField(zonelayer, "RaBET_ID", "TEXT")
 
         if "RaBET_NUM" not in fieldnames:
-            arcpy.AddField_management(zonelayer, "RaBET_NUM", "LONG")
+            arcpy.management.AddField(zonelayer, "RaBET_NUM", "LONG")
 
         if "RaBET_NAME" not in fieldnames:
-            arcpy.AddField_management(zonelayer, "RaBET_NAME", "TEXT")
+            arcpy.management.AddField(zonelayer, "RaBET_NAME", "TEXT")
 
         # create unique zone id with cursor
         cursor = arcpy.UpdateCursor(zonelayer)
@@ -1832,7 +1909,7 @@ class RaBETAnalysisTool(object):
         tablelist = []
         for index, zones in enumerate(uniquezones):
             expression = """"RaBET_ID" = '{0}'""".format(zones)
-            arcpy.SelectLayerByAttribute_management(zonelayer, "NEW_SELECTION", expression)
+            arcpy.management.SelectLayerByAttribute(zonelayer, "NEW_SELECTION", expression)
 
             namecursor = str([row[0] for row in arcpy.da.SearchCursor(zonelayer, "RaBET_NAME")][0])
 
@@ -1847,13 +1924,13 @@ class RaBETAnalysisTool(object):
                 try:
 
                     ZonalStatisticsAsTable(zonelayer, "RaBET_ID", rasters, currenttable, datatype, "ALL")
-                    arcpy.AddField_management(currenttable, "CV", "DOUBLE")
+                    arcpy.management.AddField(currenttable, "CV", "DOUBLE")
                     # arcpy.AddField_management(currenttable, "Difference", "DOUBLE")
-                    arcpy.AddField_management(currenttable, "Image", "TEXT")
-                    arcpy.AddField_management(currenttable, "Year", "TEXT")
-                    arcpy.AddField_management(currenttable, "RaBET_Name", "TEXT")
+                    arcpy.management.AddField(currenttable, "Image", "TEXT")
+                    arcpy.management.AddField(currenttable, "Year", "TEXT")
+                    arcpy.management.AddField(currenttable, "RaBET_Name", "TEXT")
 
-                    arcpy.DeleteField_management(currenttable, "ZONE-CODE")
+                    arcpy.management.DeleteField(currenttable, "ZONE-CODE")
 
                     cursor = arcpy.UpdateCursor(currenttable)
                     for row in cursor:
@@ -1885,7 +1962,7 @@ class RaBETAnalysisTool(object):
 
         for tables in tablelist:
 
-            rowcount = str(int(arcpy.GetCount_management(tables).getOutput(0)))
+            rowcount = str(int(arcpy.management.GetCount(tables).getOutput(0)))
 
             if rowcount != '1':
                 removetables.append(tables)
@@ -1904,16 +1981,16 @@ class RaBETAnalysisTool(object):
         if field.name not in allfieldslist:
             fieldMappings.removeFieldMap(fieldMappings.findFieldMapIndex(field.name))
 
-        arcpy.Merge_management(tablelist, outtable, fieldMappings)
+        arcpy.management.Merge(tablelist, outtable, fieldMappings)
 
         meanvalues = []
         differencevalues = []
         titlevalues = []
 
         templayer = outname + "_polygons"
-        arcpy.MakeFeatureLayer_management(outshape, templayer)
-        arcpy.SaveToLayerFile_management(templayer, outlayer, "RELATIVE")
-        arcpy.Delete_management(zonelayer)
+        arcpy.management.MakeFeatureLayer(outshape, templayer)
+        arcpy.management.SaveToLayerFile(templayer, outlayer, "RELATIVE")
+        arcpy.management.Delete(zonelayer)
 
         # Calculate difference
         for zones in uniquezones:
@@ -1946,7 +2023,7 @@ class RaBETAnalysisTool(object):
             try:
                 arcpy.AddMessage("\n" + "Exporting Excel spreadsheet." + "\n")
                 excelout = os.path.join(outdir, outname + ".xls")
-                arcpy.TableToExcel_conversion(outtable, excelout)
+                arcpy.conversion.TableToExcel(outtable, excelout)
             except:
                 arcpy.AddError("Error exporting Excel spreadsheet.")
                 pass
@@ -1961,9 +2038,9 @@ class RaBETAnalysisTool(object):
 
                     expression = """"RaBET_ID" = '{0}'""".format(zones)
                     tview = os.path.join("in_memory", arcpy.CreateUniqueName("tv"))
-                    arcpy.MakeTableView_management(outtable, tview, expression)
+                    arcpy.management.MakeTableView(outtable, tview, expression)
                     expression = """"RaBET_ID" = '{0}'""".format(zones)
-                    # yearcount = str(int(arcpy.GetCount_management(tview).getOutput(0)))
+                    # yearcount = str(int(arcpy.management.GetCount(tview).getOutput(0)))
                     try:
                         title = str([row[0] for row in arcpy.da.SearchCursor(tview, "RaBET_NAME", expression)][0])
 
@@ -1999,11 +2076,11 @@ class RaBETAnalysisTool(object):
                         graph.graphPropsGeneral.title = title
 
                         # Output a graph, which is created in-memory
-                        arcpy.MakeGraph_management(graphtemplate, graph, graphname)
+                        arcpy.management.MakeGraph(graphtemplate, graph, graphname)
 
                         # Save the graph as an image
                         if not os.path.isfile(graphimage):
-                            arcpy.SaveGraph_management(graphname, graphimage, "MAINTAIN_ASPECT_RATIO", "600", "375")
+                            arcpy.management.SaveGraph(graphname, graphimage, "MAINTAIN_ASPECT_RATIO", "600", "375")
 
                         else:
                             arcpy.AddWarning(graphimage + " already exists." + "\n" + "File not saved.")
@@ -2022,17 +2099,17 @@ class RaBETAnalysisTool(object):
             arcpy.AddMessage("\n" + "Number of polygons exceeds threshold of " + str(
                 zonethresh) + "." + "\n" + "Charts will not be displayed, but were saved to output directory." + "\n" + "\n")
 
-        arcpy.Delete_management("in_memory")
+        arcpy.management.Delete("in_memory")
 
         dropFields = ["Zone_ID", "RaBET_ID", "RaBET_NUM"]
-        arcpy.DeleteField_management(outlayer, dropFields)
+        arcpy.management.DeleteField(outlayer, dropFields)
 
         # Add polgons to the data frame
         try:
-            mxd = arcpy.mapping.MapDocument("CURRENT")
-            dataFrame = arcpy.mapping.ListDataFrames(mxd, "*")[0]
-            addlayer = arcpy.mapping.Layer(outlayer)
-            arcpy.mapping.AddLayer(dataFrame, addlayer)
+            mxd = arcpy.mp.MapDocument("CURRENT")
+            dataFrame = mxd.listMaps("*")[0]
+            addlayer = arcpy.mp.LayerFile(outlayer)
+            dataFrame.AddLayer(addlayer)
             # addlayer.labelClasses[0].expression = "[RaBET_NAME]"
             # addlayer.showLabels = True
             arcpy.RefreshActiveView()

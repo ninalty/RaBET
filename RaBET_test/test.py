@@ -3,9 +3,9 @@ import os
 
 kk = WCMapTool()
 
-local_path = 'C:\\Users\\ninal\\Documents\\postdoc UCDavis\\RaBET_v1\\'
+local_path = 'C:\\Users\\ninal\\Documents\\postdoc_UCDavis\\RaBET_v1\\'
 
-imagedir = os.path.join(local_path, 'RaBET_data\\MLRA 41_test\\LC080360372015061701T1-SC20210721135904')  # Landsat image directory
+imagedir = os.path.join(local_path, 'RaBET_test\\image_input\\LC080340382015060301T1-SC20210721135816')  # Landsat image directory
 mlraID = '41'  # MLRA name/ID
 yearID = str(2015)  # Year to process
 outdir = os.path.join(local_path, 'RaBET_test\\output')  # Qutput directory
