@@ -187,7 +187,7 @@ class WCMapTool(object):
             if not arcpy.Exists(scratchdir):
                 arcpy.AddMessage("Scratch Dir DNE")
                 arcpy.management.CreateFolder(rootpath, scratchdirname)
-            arcpy.management.CreateFileGDB(scratchdirname, scratchwsname, "10.0")
+            arcpy.management.CreateFileGDB(scratchdirname, scratchwsname, "CURRENT")
 
         else:
             arcpy.AddMessage("Scratch GDB exists: " + scratchws)
@@ -196,7 +196,7 @@ class WCMapTool(object):
             try:
 
                 arcpy.management.Delete(scratchws)
-                arcpy.management.CreateFileGDB(scratchdirname, scratchwsname, "10.0")
+                arcpy.management.CreateFileGDB(scratchdirname, scratchwsname, "CURRENT")
 
                 arcpy.AddMessage("Scratch directory recreated.")
             except:
@@ -208,7 +208,7 @@ class WCMapTool(object):
             if not arcpy.Exists(WCarchivedir):
                 arcpy.AddMessage("WC Dir DNE")
                 arcpy.management.CreateFolder(rootpath, WCarchivedirname)
-            arcpy.management.CreateFileGDB(WCarchivedir, WCarchivegdbname, "10.0") # TL not working
+            arcpy.management.CreateFileGDB(WCarchivedir, WCarchivegdbname, "CURRENT") # TL not working
 
         else:
             arcpy.AddMessage("Image archive exists")
@@ -449,7 +449,7 @@ class WCMapTool(object):
                             clipenvelopeROI = os.path.join("in_memory", "Clip_Envelope_" + currentpathrow)
                             arcpy.management.FeatureEnvelopeToPolygon(cliplayerROI, clipenvelopeROI, "SINGLEPART")
                             descclipROI = arcpy.Describe(clipenvelopeROI)
-                            extentclipROI = str(descclipROI.extent).translate(None, 'NaN')
+                            extentclipROI = str(descclipROI.extent).translate({None: 'NaN'})
 
                             cloudbuffer = os.path.join("in_memory", "Cloud_Buffer_" + currentpathrow)
                             arcpy.analysis.Buffer(cliplayerROI, cloudbuffer, bufferdist, "#", "#", "All", "MLRA_ID")
@@ -461,7 +461,7 @@ class WCMapTool(object):
                             arcpy.management.FeatureEnvelopeToPolygon(cloudbufferint, bufferenvelope, "SINGLEPART")
 
                             descbuffer = arcpy.Describe(bufferenvelope)
-                            extentbuffer = str(descbuffer.extent).translate(None, 'NaN')
+                            extentbuffer = str(descbuffer.extent).translate({None: 'NaN'})
 
                             extentcloud = extentbuffer
                             clipcloud = cloudbufferint
@@ -1208,16 +1208,14 @@ class WCMapTool(object):
             if ROIexist:
                 wcmosaic = "WC_MLRA_" + mlraID + "_" + startyear + "_" + endyear + "_" + ROIname + ".tif"
                 wclayertemp = os.path.join(
-                    "WC_MLRA_" + mlraID + "_" + startyear + "-" + endyear + "_" + ROIname + ".lyr")
+                    "WC_MLRA_" + mlraID + "_" + startyear + "-" + endyear + "_" + ROIname + ".lyrx")
                 wclayer = os.path.join(outdir,
-                                       "WC_MLRA_" + mlraID + "_" + startyear + "_" + endyear + "_" + ROIname + ".lyr")
+                                       "WC_MLRA_" + mlraID + "_" + startyear + "_" + endyear + "_" + ROIname + "tmp.lyrx")
             else:
                 wcmosaic = "WC_MLRA_" + mlraID + "_" + startyear + "_" + endyear + ".tif"
-                wclayertemp = os.path.join(outdir, "WC_MLRA_" + mlraID + "_" + startyear + "_" + endyear + "tmp.lyr")
-                wclayer = os.path.join(outdir, "WC_MLRA_" + mlraID + "_" + startyear + "_" + endyear + ".lyr")
+                wclayertemp = os.path.join(outdir, "WC_MLRA_" + mlraID + "_" + startyear + "_" + endyear + "tmp.lyrx")
+                wclayer = os.path.join(outdir, "WC_MLRA_" + mlraID + "_" + startyear + "_" + endyear + "tmp.lyrx")
             try:
-                # Updated 2021/04/02
-                # arcpy.CreateRasterDataset_management(outdir, wcmosaic, "", "8_BIT_UNSIGNED", "","1", "","","","")
                 inputstring = ';'.join(row for row in finalimagenames)
                 tilestring = ', '.join(row for row in finaltilenames)
                 targetstring = os.path.join(outdir, wcmosaic)
@@ -1228,8 +1226,6 @@ class WCMapTool(object):
 
             mosaicmethod = "FIRST"
 
-            # Updated 2021/04/02
-            # arcpy.Mosaic_management(inputstring,targetstring,mosaicmethod,mosaicmethod,"", "255", "", "", "")
             arcpy.management.MosaicToNewRaster(input_rasters=inputstring, output_location=outdir,
                                                raster_dataset_name_with_extension=wcmosaic, pixel_type="8_BIT_UNSIGNED",
                                                mosaic_method=mosaicmethod, number_of_bands=1)
@@ -1246,25 +1242,26 @@ class WCMapTool(object):
             metadata.seek(0, 0)
             metadata.close
 
-            if ROIshp is None:
-                arcpy.conversion.RasterToGeodatabase(targetstring, WCarchivegdb) # fail ERROR 999999
+            if ROIshp is None: # not working
+                arcpy.conversion.RasterToGeodatabase(targetstring, WCarchivegdb)
                 metanamearchive = os.path.join(metadir, "meta_" + mlraID + "_" + str(yearID) + ".txt")
                 metaname = os.path.join(outdir, "meta_" + mlraID + "_" + str(yearID) + ".txt")
                 shutil.copy(metaname, metanamearchive)
 
             # Add layer and symbology
-            arcpy.management.MakeRasterLayer(targetstring, wclayertemp, "#", "#", "1") #TL
+            arcpy.management.MakeRasterLayer(targetstring, wclayertemp, "#", "#", "1")
             wcsymbology = os.path.join(tooldatapath, "wcsymbology.lyr")
             arcpy.management.ApplySymbologyFromLayer(wclayertemp, wcsymbology)
-            arcpy.management.SaveToLayerFile(wclayertemp, wclayer, "RELATIVE", "CURRENT") # arcpy.SaveToLayerFile_management(wclayertemp, wclayer, "RELATIVE", "10.1")
+            arcpy.management.SaveToLayerFile(wclayertemp, wclayer, "RELATIVE", "CURRENT")
 
-            try:  # this trunk is not working.
-                mxd = arcpy.mp.ArcGISProject("CURRENT")
+            try:
+                map_path = 'C:\\Users\\ninal\\Documents\\postdoc_UCDavis\\RaBET_v1\\RaBET_GIS\\RaBET.aprx' # TL need to remove
+                mxd = arcpy.mp.ArcGISProject(map_path)# mxd = arcpy.mp.ArcGISProject("CURRENT")
                 dataFrame = mxd.listMaps("*")[0]
                 addlayer = arcpy.mp.LayerFile(wclayer)
                 dataFrame.addLayer(addlayer, 'TOP')
-                arcpy.RefreshTOC()
-                arcpy.RefreshActiveView()
+                # arcpy.RefreshTOC() # not available to 3.0
+                # arcpy.RefreshActiveView()
             except:
                 arcpy.AddWarning("Error adding layer to dataframe. Layer can be added from output directory")
 
@@ -1340,7 +1337,7 @@ class WCMapTool(object):
                     clipenvelopeROI = os.path.join("in_memory", "Clip_Envelope")
                     arcpy.management.FeatureEnvelopeToPolygon(cliplayerROI, clipenvelopeROI, "SINGLEPART")
                     descclipROI = arcpy.Describe(clipenvelopeROI)
-                    extentclipROI = str(descclipROI.extent).translate(None, 'NaN')
+                    extentclipROI = str(descclipROI.extent).translate({None: 'NaN'})
 
                     arcpy.management.Clip(WCarchiveimage, extentclipROI, wcmosaicout, cliplayerROI, "255",
                                           "ClippingGeometry", "NO_MAINTAIN_EXTENT")
@@ -1366,12 +1363,13 @@ class WCMapTool(object):
 
                 # Add data to data frame
                 try:
-                    mxd = arcpy.mp.MapDocument("CURRENT")
+                    map_path = 'C:\\Users\\ninal\\Documents\\postdoc_UCDavis\\RaBET_v1\\RaBET_GIS\\RaBET.aprx'
+                    mxd = arcpy.mp.ArcGISProject(map_path) # mxd = arcpy.mp.MapDocument("CURRENT")
                     dataFrame = mxd.listMaps("*")[0]
-                    addlayer = arcpy.mp.LayerFile(wclayer + ".lyrx")
+                    addlayer = arcpy.mp.LayerFile(wclayer)
                     dataFrame.addLayer(addlayer, 'TOP') # arcpy.mp.AddLayer(dataFrame, addlayer, "TOP")
-                    arcpy.RefreshTOC()
-                    arcpy.RefreshActiveView()
+                    # arcpy.RefreshTOC()
+                    # arcpy.RefreshActiveView()
                 except:
                     arcpy.AddWarning("Error adding layer to dataframe. Layer can be added from output directory")
                     pass
@@ -1533,34 +1531,36 @@ class WCMapTool(object):
 
             # Add data to data frame
             try:
-                mxd = arcpy.mp.MapDocument("CURRENT")
-                dataFrame = mxd.ListDataFrames("*")[0]
+                map_path = 'C:\\Users\\ninal\\Documents\\postdoc_UCDavis\\RaBET_v1\\RaBET_GIS\\RaBET.aprx'
+                mxd = arcpy.mp.ArcGISProject(map_path) # mxd = arcpy.mp.MapDocument("CURRENT")
+                dataFrame = mxd.listMaps("*")[0]
                 newlayer = arcpy.mp.LayerFile(metalayer + ".lyrx")
                 dataFrame.addLayer(newlayer, 'TOP') # arcpy.mp.AddLayer(dataFrame, newlayer, "TOP")
 
-                layer = arcpy.mp.ListLayers(mxd, "")[0]
+                layer = dataFrame.listLayers()
                 arcpy.AddMessage(layer)
-                if layer.supports("LABELCLASSES"):
-                    for lblclass in layer.labelClasses:
-                        # lblClass.expression = lblClass.expression = "\"<FNT size = '18'>\" & [Img_Years] & \"</FNT>\""
-                        lblclass.showClassLabels = True
-                        lblclass.expression = "[Img_Years]"
+                for lyr in layer:
+                    if lyr.supports("SHOWLABELS"): #https://pro.arcgis.com/en/pro-app/latest/arcpy/mapping/layer-class.htm
 
-                        # lblclass.expression = '"%s" & [Img_Years] & "%s"' % ("<FNT size=""18"">", "</FNT>")
-                        lblclass.expression = '"{}" + [Img_Years] +  "{}"'.format(
-                            "<FNT name='Arial' size = '12'>""<BOL>", "</BOL>""</FNT>")
+                        for lblclass in lyr.listLabelClasses():
+                            lyr.showClassLabels = True
+                            # lblClass.expression = lblClass.expression = "\"<FNT size = '18'>\" & [Img_Years] & \"</FNT>\""
+                            lblclass.expression = "[Img_Years]"
+                            # lblclass.expression = '"%s" & [Img_Years] & "%s"' % ("<FNT size=""18"">", "</FNT>")
+                            lblclass.expression = '"{}" + [Img_Years] +  "{}"'.format(
+                                "<FNT name='Arial' size = '12'>""<BOL>", "</BOL>""</FNT>")
 
-                        layer.showLabels = True
+                            lyr.showLabels = True
 
                         # Adding Labels layer = arcpy.mapping.ListLayers(mxd, "")[0]  if layer.supports("LABELCLASSES"):     for lblclass in layer.labelClasses:         lblclass.className = "Flaeche"         lblclass.expression = ""<CLR red='255' green='0' blue='0'>" & [FID] & VBNewLine & Round([AREA_mm2],2) & "</CLR>""     lblclass.showClassLabels = True layer.showLabels = True arcpy.RefreshActiveView()
 
-                arcpy.RefreshActiveView()
+                # arcpy.RefreshActiveView() not working for 3.0
 
 
             except:
                 arcpy.AddWarning("Error adding layer to dataframe. Layer can be added from output directory")
                 pass
-        PackageOut = wclayer + '.lpk'
+        PackageOut = wclayer[:-5] + '.lpkx'
         PackageLayers = [addlayer, layer]
         arcpy.management.PackageLayer(PackageLayers, PackageOut, "PRESERVE", "CONVERT_ARCSDE", "#", "ALL", "ALL",
                                       "CURRENT", "#", "RaBETv7", "RaBETv7")
