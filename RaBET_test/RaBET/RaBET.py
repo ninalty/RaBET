@@ -1,11 +1,3 @@
-##V8 4/1/2019 - updated MLRA Data polygon and full implementation of Meta Data Layers and Layer Package output
-##V7 added export of layers as layerpackage - this version only - MK
-##V7 Modified by MK 10/3/2018 - Added image meta data functionality - Polygon generated with image meta data
-##V6 7/20/20 Modified by MK to accept image years in UI back to 1987 - Line 99
-##V6 Modified by MK 03/09/2018 added exponent term attribute table and dynamic equations.
-##V5 Modified by MK 11/3/2017 added functionality  for multiple linear regression equation construction through attribute table.
-##V4 Modified by MK 09/25/2017 to incorporate New Landsat SR Product as of 4/2017 -Collection 1 SR-
-## Not compatible with prior Landsat formats
 import arcpy
 import os
 import sys
@@ -132,7 +124,8 @@ class WCMapTool(object):
         """Modify the messages created by internal validation for each tool
         parameter.  This method is called after internal validation."""
         return
-    def execute(self, parameters, messages):
+
+    def execute(self, parameters, message):
         """The source code of the tool."""
 
         # Version and update information
@@ -140,12 +133,18 @@ class WCMapTool(object):
         modified = r"11/03/2022"
         executiontime = datetime.datetime.now().strftime("%I:%M%p on %B %d, %Y")
 
-        # Define input parameters # NL change when run in arcgis
-        imagedir = parameters[0].valueAsText  # Landsat image directory
-        mlraID = parameters[1].valueAsText  # MLRA name/ID
-        yearID = str(parameters[2].valueAsText)  # Year to process
-        outdir = parameters[3].valueAsText  # Qutput directory
-        ROIshp = parameters[4].valueAsText  # Option ROI shapefile
+        # Define input parameters
+        # imagedir = parameters[0]  # Landsat image directory
+        # mlraID = parameters[1]  # MLRA name/ID
+        # yearID = parameters[2]  # Year to process
+        # outdir = parameters[3]  # Qutput directory
+        # ROIshp = parameters[4]  # Option ROI shapefile
+
+        imagedir = parameters[0].valueAsText # Landsat image directory
+        mlraID = parameters[1].valueAsText # MLRA name/ID
+        yearID = str(parameters[2].valueAsText) # Year to process
+        outdir = parameters[3].valueAsText # Qutput directory
+        ROIshp = parameters[4].valueAsText # Option ROI shapefile
 
         CompLength = 4  # Number of years in the vegetation index composite
 
@@ -202,8 +201,8 @@ class WCMapTool(object):
             arcpy.AddMessage("Scratch GDB DNE")
             if not arcpy.Exists(scratchdir):
                 arcpy.AddMessage("Scratch Dir DNE")
-                arcpy.CreateFolder_management(rootpath, scratchdirname)
-            arcpy.CreateFileGDB_management(scratchdirname, scratchwsname, "10.0")
+                arcpy.management.CreateFolder(rootpath, scratchdirname)
+            arcpy.management.CreateFileGDB(scratchdirname, scratchwsname, "CURRENT")
 
         else:
             arcpy.AddMessage("Scratch GDB exists: " + scratchws)
@@ -211,8 +210,8 @@ class WCMapTool(object):
 
             try:
 
-                arcpy.Delete_management(scratchws)
-                arcpy.CreateFileGDB_management(scratchdirname, scratchwsname, "10.0")
+                arcpy.management.Delete(scratchws)
+                arcpy.management.CreateFileGDB(scratchdirname, scratchwsname, "CURRENT")
 
                 arcpy.AddMessage("Scratch directory recreated.")
             except:
@@ -223,14 +222,14 @@ class WCMapTool(object):
             arcpy.AddMessage("WC GDB DNE")
             if not arcpy.Exists(WCarchivedir):
                 arcpy.AddMessage("WC Dir DNE")
-                arcpy.CreateFolder_management(rootpath, WCarchivedirname)
-            arcpy.management.CreateFileGDB(WCarchivedir, WCarchivegdbname, "10.0") # TL not working
+                arcpy.management.CreateFolder(rootpath, WCarchivedirname)
+            arcpy.management.CreateFileGDB(WCarchivedir, WCarchivegdbname, "CURRENT") # TL not working
 
         else:
             arcpy.AddMessage("Image archive exists")
 
         if not arcpy.Exists(metadir):
-            arcpy.CreateFolder_management(WCarchivedir, "metadata")
+            arcpy.management.CreateFolder(WCarchivedir, "metadata")
 
         if not arcpy.Exists(WCarchiveimage):
             arcpy.AddMessage(WCimagename + " does not exist in archive. Image will be processed.")
@@ -253,8 +252,8 @@ class WCMapTool(object):
                 arcpy.AddMessage("Subsetting region of interest from shapefile: " + "\n" + str(ROIshp) + "\n")
 
                 inttest = os.path.join("in_memory", "inttest")
-                arcpy.Intersect_analysis([mlradata, ROIshp], inttest)
-                rowcount = int(arcpy.GetCount_management(inttest).getOutput(0))
+                arcpy.analysis.Intersect([mlradata, ROIshp], inttest)
+                rowcount = int(arcpy.management.GetCount(inttest).getOutput(0))
 
                 metaname = os.path.join(outdir, "meta_" + mlraID + "_" + str(yearID) + "_" + ROIname + ".txt")
 
@@ -265,7 +264,7 @@ class WCMapTool(object):
                 else:
                     # Clip MLRA_Data.shp to region of interest
                     mlradataROI = os.path.join("in_memory", "MLRA_Data_ROI")
-                    arcpy.Clip_analysis(mlradata, ROIshp, mlradataROI)
+                    arcpy.analysis.Clip(mlradata, ROIshp, mlradataROI)
                     theregion = mlradataROI
                     regionname = ROIname
 
@@ -370,17 +369,6 @@ class WCMapTool(object):
             finalimages = []
             inmemorylist = []
 
-            # imagedir = parameters[0].valueAsText # Landsat image directory
-            # mlraID = parameters[1].valueAsText # MLRA name/ID
-            # yearID = str(parameters[2].valueAsText) # Year to process
-            # outdir = parameters[3].valueAsText # Qutput directory
-            # ROIshp = parameters[4].valueAsText # Option ROI shapefile
-
-            # CompLength = 4 # Number of years in the vegetation index composite
-
-            # startyear = str(int(yearID) - (CompLength -1))
-            # endyear = yearID
-
             for tiles in uniquetiles:
                 # Create list to store dictionaries of image properties
                 filteredimages = []
@@ -458,11 +446,11 @@ class WCMapTool(object):
                         # Select polygon for current path/row
                         expression = """"Path_Row" = '{0}' AND "MLRA_ID" = '{1}'""".format(currentpathrow, mlraID)
                         cliplayertile = "Clip_Layer_" + currentpathrow
-                        arcpy.MakeFeatureLayer_management(mlradata, cliplayertile, expression)
+                        arcpy.management.MakeFeatureLayer(mlradata, cliplayertile, expression)
 
                         # Define geometry/extent parameters for region of analysis
                         clipenvelopetile = os.path.join("in_memory", "Clip_Envelope_" + currentpathrow)
-                        arcpy.FeatureEnvelopeToPolygon_management(cliplayertile, clipenvelopetile, "SINGLEPART")
+                        arcpy.management.FeatureEnvelopeToPolygon(cliplayertile, clipenvelopetile, "SINGLEPART")
                         desccliptile = arcpy.Describe(clipenvelopetile)
                         extentcliptile = str(desccliptile.extent).translate({None: 'NaN'}) #TL str(desccliptile.extent).translate(None, 'NaN') # don't understand
 
@@ -471,24 +459,24 @@ class WCMapTool(object):
 
                             cliplayerROI = arcpy.CreateUniqueName(
                                 os.path.join("in_memory", "Clip_Layer_" + currentpathrow))
-                            arcpy.MakeFeatureLayer_management(mlradataROI, cliplayerROI, expression)
+                            arcpy.management.MakeFeatureLayer(mlradataROI, cliplayerROI, expression)
 
                             clipenvelopeROI = os.path.join("in_memory", "Clip_Envelope_" + currentpathrow)
-                            arcpy.FeatureEnvelopeToPolygon_management(cliplayerROI, clipenvelopeROI, "SINGLEPART")
+                            arcpy.management.FeatureEnvelopeToPolygon(cliplayerROI, clipenvelopeROI, "SINGLEPART")
                             descclipROI = arcpy.Describe(clipenvelopeROI)
-                            extentclipROI = str(descclipROI.extent).translate(None, 'NaN')
+                            extentclipROI = str(descclipROI.extent).translate({None: 'NaN'})
 
                             cloudbuffer = os.path.join("in_memory", "Cloud_Buffer_" + currentpathrow)
-                            arcpy.Buffer_analysis(cliplayerROI, cloudbuffer, bufferdist, "#", "#", "All", "MLRA_ID")
+                            arcpy.analysis.Buffer(cliplayerROI, cloudbuffer, bufferdist, "#", "#", "All", "MLRA_ID")
 
                             cloudbufferint = os.path.join("in_memory", "Cloud_Buffer_Intersect_" + currentpathrow)
-                            arcpy.Clip_analysis(cloudbuffer, cliplayertile, cloudbufferint)
+                            arcpy.analysis.Clip(cloudbuffer, cliplayertile, cloudbufferint)
 
                             bufferenvelope = os.path.join("in_memory", "Buffer_Envelope_" + currentpathrow)
-                            arcpy.FeatureEnvelopeToPolygon_management(cloudbufferint, bufferenvelope, "SINGLEPART")
+                            arcpy.management.FeatureEnvelopeToPolygon(cloudbufferint, bufferenvelope, "SINGLEPART")
 
                             descbuffer = arcpy.Describe(bufferenvelope)
-                            extentbuffer = str(descbuffer.extent).translate(None, 'NaN')
+                            extentbuffer = str(descbuffer.extent).translate({None: 'NaN'})
 
                             extentcloud = extentbuffer
                             clipcloud = cloudbufferint
@@ -507,9 +495,9 @@ class WCMapTool(object):
                         arcpy.AddMessage(r"Screening image for cloud/snow cover.")
                         cloudrasterclip = os.path.join(scratchws, currentimagename + "_cfmask_clip")
 
-                        arcpy.Clip_management(cloudrasterRecl, extentcloud, cloudrasterclip, clipcloud, "255",
+                        arcpy.management.Clip(cloudrasterRecl, extentcloud, cloudrasterclip, clipcloud, "255",
                                               "ClippingGeometry", "NO_MAINTAIN_EXTENT")
-                        arcpy.BuildRasterAttributeTable_management(cloudrasterclip, "Overwrite")
+                        arcpy.management.BuildRasterAttributeTable(cloudrasterclip, "Overwrite")
 
                         cursorcloud = [row[0] for row in arcpy.da.SearchCursor(cloudrasterclip, "Count")]
                         cursorvalues = [row[0] for row in arcpy.da.SearchCursor(cloudrasterclip, "Value")]
@@ -576,7 +564,7 @@ class WCMapTool(object):
                         processstarttime = time.time()
                         processendtime = time.time() - processstarttime
                         processendtime = int(round(processendtime))
-                        arcpy.Delete_management(cloudrasterclip)
+                        arcpy.management.Delete(cloudrasterclip)
 
                         # check to see if image meets cloud cover threshold criteria
                         if int(totaldisturbedpercent) > int(cloudthresh[0]):
@@ -585,6 +573,8 @@ class WCMapTool(object):
                                 cloudthresh[0]) + r"%.")
                             metadata.write("    " + images + " - Excluded - Total disturbed pixels: " + str(
                                 int(round(totaldisturbedpercent))) + "%. " + "\n")
+
+
 
                         # Begin vegetation index processing
                         else:
@@ -701,11 +691,11 @@ class WCMapTool(object):
                                 meanvi = str([row[0] for row in arcpy.da.SearchCursor(zonalstats, "MEAN")][0])
                                 stdvi = [row[0] for row in arcpy.da.SearchCursor(zonalstats, "STD")]
                                 area = [row[0] for row in arcpy.da.SearchCursor(zonalstats, "AREA")]
-                                arcpy.Delete_management(zonalstats)
+                                arcpy.management.Delete(zonalstats)
 
                                 # Clip VI raster to region of interest
                                 VIcliptile = os.path.join(scratchws, indexname + pathname + rowname + DOY)
-                                arcpy.Clip_management(VImask, extentVI, VIcliptile, clipVI, "255", "ClippingGeometry",
+                                arcpy.management.Clip(VImask, extentVI, VIcliptile, clipVI, "255", "ClippingGeometry",
                                                       "NO_MAINTAIN_EXTENT")
                                 inmemorylist.append(VIcliptile)
 
@@ -740,7 +730,7 @@ class WCMapTool(object):
                             metadata.write(
                                 "    " + images + " - Total disturbed pixels (snow, cloud and shadow) = " + str(
                                     int(round(totaldisturbedpercent))) + "%. " + "\n")
-                            arcpy.Delete_management(cloudrasterRecl)
+                            arcpy.management.Delete(cloudrasterRecl)
 
                         break # super slow
 
@@ -1179,7 +1169,7 @@ class WCMapTool(object):
 
                     # Updated 2021/04/02
                     # wcbounds.save(wcname)
-                    arcpy.CopyRaster_management(in_raster=wcbounds, out_rasterdataset=wcname,
+                    arcpy.management.CopyRaster(in_raster=wcbounds, out_rasterdataset=wcname,
                                                 pixel_type="8_BIT_UNSIGNED")
                     inmemorylist.append(wcname)
 
@@ -1233,13 +1223,13 @@ class WCMapTool(object):
             if ROIexist:
                 wcmosaic = "WC_MLRA_" + mlraID + "_" + startyear + "_" + endyear + "_" + ROIname + ".tif"
                 wclayertemp = os.path.join(
-                    "WC_MLRA_" + mlraID + "_" + startyear + "-" + endyear + "_" + ROIname + ".lyr")
+                    "WC_MLRA_" + mlraID + "_" + startyear + "-" + endyear + "_" + ROIname + ".lyrx")
                 wclayer = os.path.join(outdir,
-                                       "WC_MLRA_" + mlraID + "_" + startyear + "_" + endyear + "_" + ROIname + ".lyr")
+                                       "WC_MLRA_" + mlraID + "_" + startyear + "_" + endyear + "_" + ROIname + "tmp.lyrx")
             else:
                 wcmosaic = "WC_MLRA_" + mlraID + "_" + startyear + "_" + endyear + ".tif"
-                wclayertemp = os.path.join(outdir, "WC_MLRA_" + mlraID + "_" + startyear + "_" + endyear + "tmp.lyr")
-                wclayer = os.path.join(outdir, "WC_MLRA_" + mlraID + "_" + startyear + "_" + endyear + ".lyr")
+                wclayertemp = os.path.join(outdir, "WC_MLRA_" + mlraID + "_" + startyear + "_" + endyear + "tmp.lyrx")
+                wclayer = os.path.join(outdir, "WC_MLRA_" + mlraID + "_" + startyear + "_" + endyear + "tmp.lyrx")
             try:
                 # Updated 2021/04/02
                 # arcpy.CreateRasterDataset_management(outdir, wcmosaic, "", "8_BIT_UNSIGNED", "","1", "","","","")
@@ -1271,7 +1261,7 @@ class WCMapTool(object):
             metadata.seek(0, 0)
             metadata.close
 
-            if ROIshp is None:
+            if ROIshp is None: # not working
                 arcpy.conversion.RasterToGeodatabase(targetstring, WCarchivegdb) # fail ERROR 999999
                 metanamearchive = os.path.join(metadir, "meta_" + mlraID + "_" + str(yearID) + ".txt")
                 metaname = os.path.join(outdir, "meta_" + mlraID + "_" + str(yearID) + ".txt")
@@ -1280,24 +1270,25 @@ class WCMapTool(object):
             # Add layer and symbology
             arcpy.management.MakeRasterLayer(targetstring, wclayertemp, "#", "#", "1") #TL
             wcsymbology = os.path.join(tooldatapath, "wcsymbology.lyr")
-            arcpy.management.ApplySymbologyFromLayer(wclayertemp, wcsymbology)
-            arcpy.management.SaveToLayerFile(wclayertemp, wclayer, "RELATIVE", "CURRENT") # arcpy.SaveToLayerFile_management(wclayertemp, wclayer, "RELATIVE", "10.1")
+            arcpy.management.ApplySymbologyFromLayer(wclayertemp, wcsymbology) # wclayertemp needs to be .lyr since wcsymbology is .lyr
+            arcpy.management.SaveToLayerFile(wclayertemp, wclayer, "RELATIVE", "CURRENT")
 
-            try:  # this trunk is not working.
-                mxd = arcpy.mp.ArcGISProject("CURRENT")
+            try:
+                # map_path = 'C:\\Users\\ninal\\Documents\\postdoc_UCDavis\\RaBET_v1\\RaBET_GIS\\RaBET.aprx' # TL need to remove
+                mxd = arcpy.mp.ArcGISProject("CURRENT")# mxd = arcpy.mp.ArcGISProject("CURRENT")
                 dataFrame = mxd.listMaps("*")[0]
                 addlayer = arcpy.mp.LayerFile(wclayer)
                 dataFrame.addLayer(addlayer, 'TOP')
-                arcpy.RefreshTOC()
-                arcpy.RefreshActiveView()
+                # arcpy.RefreshTOC() # not availablle to acrcgis pro
+                # arcpy.RefreshActiveView()
             except:
                 arcpy.AddWarning("Error adding layer to dataframe. Layer can be added from output directory")
 
                 pass
 
-            arcpy.Delete_management("in_memory")
+            arcpy.management.Delete("in_memory")
             for rasters in inmemorylist:
-                arcpy.Delete_management(rasters)
+                arcpy.management.Delete(rasters)
 
 
         ######################### MSAVI Processing End
@@ -1347,7 +1338,7 @@ class WCMapTool(object):
                 arcpy.AddMessage("Subsetting region of interest from shapefile: " + "\n" + str(ROIshp) + "\n")
 
                 inttest = os.path.join("in_memory", "inttest")
-                arcpy.Intersect_analysis([mlradata, ROIshp], inttest)
+                arcpy.analysis.Intersect([mlradata, ROIshp], inttest)
                 rowcount = int(arcpy.management.GetCount(inttest).getOutput(0))
 
                 if rowcount == 0:
@@ -1365,7 +1356,7 @@ class WCMapTool(object):
                     clipenvelopeROI = os.path.join("in_memory", "Clip_Envelope")
                     arcpy.management.FeatureEnvelopeToPolygon(cliplayerROI, clipenvelopeROI, "SINGLEPART")
                     descclipROI = arcpy.Describe(clipenvelopeROI)
-                    extentclipROI = str(descclipROI.extent).translate(None, 'NaN')
+                    extentclipROI = str(descclipROI.extent).translate({None: 'NaN'})
 
                     arcpy.management.Clip(WCarchiveimage, extentclipROI, wcmosaicout, cliplayerROI, "255",
                                           "ClippingGeometry", "NO_MAINTAIN_EXTENT")
@@ -1385,18 +1376,19 @@ class WCMapTool(object):
             # create layer and symbology
             if DataExists == True:
                 arcpy.management.MakeRasterLayer(wcmosaicout, wclayertemp, "#", "#", "1")
-                wcsymbology = os.path.join(tooldatapath, "wcsymbology.lyrx")
+                wcsymbology = os.path.join(tooldatapath, "wcsymbology.lyr")
                 arcpy.management.ApplySymbologyFromLayer(wclayertemp, wcsymbology)
                 arcpy.management.SaveToLayerFile(wclayertemp, wclayer, "RELATIVE", "CURRENT")
 
                 # Add data to data frame
                 try:
-                    mxd = arcpy.mp.MapDocument("CURRENT")
+                    # map_path = 'C:\\Users\\ninal\\Documents\\postdoc_UCDavis\\RaBET_v1\\RaBET_GIS\\RaBET.aprx'
+                    mxd = arcpy.mp.ArcGISProject("CURRENT") # mxd = arcpy.mp.MapDocument("CURRENT")
                     dataFrame = mxd.listMaps("*")[0]
-                    addlayer = arcpy.mp.LayerFile(wclayer + ".lyrx")
-                    dataFrame.addLayer(addlayer, 'TOP')  # arcpy.mp.AddLayer(dataFrame, addlayer, "TOP")
-                    arcpy.RefreshTOC()
-                    arcpy.RefreshActiveView()
+                    addlayer = arcpy.mp.LayerFile(wclayer)
+                    dataFrame.addLayer(addlayer, 'TOP') # arcpy.mp.AddLayer(dataFrame, addlayer, "TOP")
+                    # arcpy.RefreshTOC()
+                    # arcpy.RefreshActiveView()
                 except:
                     arcpy.AddWarning("Error adding layer to dataframe. Layer can be added from output directory")
                     pass
@@ -1455,7 +1447,7 @@ class WCMapTool(object):
             YearsList.append(Yearfullstring)
 
         tempShapeName = os.path.join(outdir, "temp_" + mlraID + "_" + yearID + ".shp")
-        arcpy.management.CopyFeatures(mlradata, tempShapeName)  # TL
+        arcpy.management.CopyFeatures(mlradata, tempShapeName) #TL
 
         with arcpy.da.UpdateCursor(tempShapeName, "MLRA_ID") as cursor:
             for row in cursor:
@@ -1552,40 +1544,42 @@ class WCMapTool(object):
             # create layer and symbology
 
             arcpy.management.MakeFeatureLayer(metaShapeName, metalayertemp)
-            metasymbology = os.path.join(tooldatapath, "MLRA_MetaData_Layer.lyrx")
+            metasymbology = os.path.join(tooldatapath, "MLRA_MetaData_Layer.lyr") #1
             arcpy.management.ApplySymbologyFromLayer(metalayertemp, metasymbology)
             arcpy.management.SaveToLayerFile(metalayertemp, metalayer, "RELATIVE", "CURRENT")
 
             # Add data to data frame
             try:
-                mxd = arcpy.mp.MapDocument("CURRENT")
-                dataFrame = mxd.ListDataFrames("*")[0]
+                # map_path = 'C:\\Users\\ninal\\Documents\\postdoc_UCDavis\\RaBET_v1\\RaBET_GIS\\RaBET.aprx'
+                mxd = arcpy.mp.ArcGISProject("CURRENT") # mxd = arcpy.mp.MapDocument("CURRENT")
+                dataFrame = mxd.listMaps("*")[0]
                 newlayer = arcpy.mp.LayerFile(metalayer + ".lyrx")
-                dataFrame.addLayer(addlayer, 'TOP')  # arcpy.mp.AddLayer(dataFrame, newlayer, "TOP")
+                dataFrame.addLayer(newlayer, 'TOP') # arcpy.mp.AddLayer(dataFrame, newlayer, "TOP")
 
-                layer = arcpy.mp.ListLayers(mxd, "")[0]
+                layer = dataFrame.listLayers()
                 arcpy.AddMessage(layer)
-                if layer.supports("LABELCLASSES"):
-                    for lblclass in layer.labelClasses:
-                        # lblClass.expression = lblClass.expression = "\"<FNT size = '18'>\" & [Img_Years] & \"</FNT>\""
-                        lblclass.showClassLabels = True
-                        lblclass.expression = "[Img_Years]"
+                for lyr in layer:
+                    if lyr.supports("SHOWLABELS"): #https://pro.arcgis.com/en/pro-app/latest/arcpy/mapping/layer-class.htm
+                        for lblclass in lyr.listLabelClasses():
+                            # lblClass.expression = lblClass.expression = "\"<FNT size = '18'>\" & [Img_Years] & \"</FNT>\""
+                            lblclass.showClassLabels = True
+                            lblclass.expression = "[Img_Years]"
 
-                        # lblclass.expression = '"%s" & [Img_Years] & "%s"' % ("<FNT size=""18"">", "</FNT>")
-                        lblclass.expression = '"{}" + [Img_Years] +  "{}"'.format(
-                            "<FNT name='Arial' size = '12'>""<BOL>", "</BOL>""</FNT>")
+                            # lblclass.expression = '"%s" & [Img_Years] & "%s"' % ("<FNT size=""18"">", "</FNT>")
+                            lblclass.expression = '"{}" + [Img_Years] +  "{}"'.format(
+                                "<FNT name='Arial' size = '12'>""<BOL>", "</BOL>""</FNT>")
 
-                        layer.showLabels = True
+                            layer.showLabels = True
 
                         # Adding Labels layer = arcpy.mapping.ListLayers(mxd, "")[0]  if layer.supports("LABELCLASSES"):     for lblclass in layer.labelClasses:         lblclass.className = "Flaeche"         lblclass.expression = ""<CLR red='255' green='0' blue='0'>" & [FID] & VBNewLine & Round([AREA_mm2],2) & "</CLR>""     lblclass.showClassLabels = True layer.showLabels = True arcpy.RefreshActiveView()
 
-                arcpy.RefreshActiveView()
+                # arcpy.RefreshActiveView() not working for 3.0
 
 
             except:
                 arcpy.AddWarning("Error adding layer to dataframe. Layer can be added from output directory")
                 pass
-        PackageOut = wclayer + '.lpk'
+        PackageOut = wclayer[:-5] + '.lpkx'
         PackageLayers = [addlayer, layer]
         arcpy.management.PackageLayer(PackageLayers, PackageOut, "PRESERVE", "CONVERT_ARCSDE", "#", "ALL", "ALL",
                                       "CURRENT", "#", "RaBETv7", "RaBETv7")
@@ -1598,6 +1592,7 @@ class WCMapTool(object):
         return
 
 ####################################################### Next Tool
+
 
 class RaBETAnalysisTool(object):
     def __init__(self):
@@ -1727,7 +1722,7 @@ class RaBETAnalysisTool(object):
             parameters[4].enabled = "true"
             parameters[5].enabled = "false"
             parameters[6].enabled = "false"
-            # parameters[4].value = os.path.join(sys.path[0], "tooldata","UI.lyrx")
+            # parameters[4].value = os.path.join(sys.path[0], "tooldata","UI.lyr")
             parameters[5].value = os.path.join(sys.path[0], "tooldata", "UI.shp")
 
         return
@@ -1795,7 +1790,7 @@ class RaBETAnalysisTool(object):
         outtable = os.path.join(outdir, outtablename)  # Table output name
         outshapename = outname + "_polygons"
         outshape = os.path.join(outdir, outshapename + ".shp")
-        outlayer = os.path.join(outdir, outshapename + ".lyrx")
+        outlayer = os.path.join(outdir, outshapename + ".lyr")
         zonelayer = os.path.join("in_memory", outname + "_zonelayer")
         zonethresh = 10  # max number of graphs that can dispayed before visualization is disabled.
 
@@ -2109,7 +2104,7 @@ class RaBETAnalysisTool(object):
             mxd = arcpy.mp.MapDocument("CURRENT")
             dataFrame = mxd.listMaps("*")[0]
             addlayer = arcpy.mp.LayerFile(outlayer)
-            dataFrame.AddLayer(addlayer)
+            arcpy.mp.AddLayer(dataFrame, addlayer)
             # addlayer.labelClasses[0].expression = "[RaBET_NAME]"
             # addlayer.showLabels = True
             arcpy.RefreshActiveView()
@@ -2119,3 +2114,4 @@ class RaBETAnalysisTool(object):
             pass
 
         return
+
