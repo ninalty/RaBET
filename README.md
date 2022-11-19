@@ -1,3 +1,3 @@
 # RaBET
 
-update from python 2.7 to 3.0
+update from Landsat collection 1 to collection 2
