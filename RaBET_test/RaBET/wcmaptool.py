@@ -110,7 +110,7 @@ class WCMapTool(object):
     #     return
 
     # def execute(self, parameters, messages):
-    def execute(self, parameters):
+    def execute(self, parameters, collection):
         """The source code of the tool."""
 
         # Version and update information
@@ -385,14 +385,19 @@ class WCMapTool(object):
                         imagenum = imindex + 1
                         arcpy.AddMessage("\n" + "Processing image " + str(imagenum) + " of " + str(
                             availableimagenum) + ": " + images + "\n")
-                        currentimagedir = imagedir # currentimagedir = os.path.join(imagedir, images.split('.')[0]) #TL
+                        currentimagedir = imagedir
 
                         # Cloud Cover Screening
 
                         processstarttime = time.time()
 
                         # Load cloud mask image from current directory as raster
-                        cfmask = glob.glob(currentimagedir + '\\*pixel_qa.tif') #TL
+                        if collection == 1:
+                            cfmask = glob.glob(currentimagedir + '\\*pixel_qa.tif') # collection2
+
+                        if collection == 2:
+                            cfmask = glob.glob(currentimagedir + '\\*QA_PIXEL.tif')
+
                         cloudraster = arcpy.Raster(cfmask[0])
 
                         # Define projection to current cloud mask image
@@ -437,7 +442,7 @@ class WCMapTool(object):
                         clipenvelopetile = os.path.join("in_memory", "Clip_Envelope_" + currentpathrow)
                         arcpy.management.FeatureEnvelopeToPolygon(cliplayertile, clipenvelopetile, "SINGLEPART")
                         desccliptile = arcpy.Describe(clipenvelopetile)
-                        extentcliptile = str(desccliptile.extent).translate({None: 'NaN'}) #TL str(desccliptile.extent).translate(None, 'NaN') # don't understand
+                        extentcliptile = str(desccliptile.extent).translate({None: 'NaN'})
 
                         # Define geometry parameters for subset region if it exists
                         if ROIexist:
@@ -584,29 +589,52 @@ class WCMapTool(object):
 
                             arcpy.AddMessage(
                                 "\n" + "Processing " + str(indexnumber) + " vegetation indices: " + indexstring + ". ")
-                            for indexname in indexlist:
+                            for indexname in indexlist: # collection2
+                                if collection == 1:
+                                    # select appropriate Landsat bands and apply conversion factor
+                                    if satellite == '8':
+                                        blueimage = glob.glob(currentimagedir + '\\*sr_band2.tif')
+                                        greenimage = glob.glob(currentimagedir + '\\*sr_band3.tif')
+                                        redimage = glob.glob(currentimagedir + '\\*sr_band4.tif')
+                                        nirimage = glob.glob(currentimagedir + '\\*sr_band5.tif')
+                                        swir1image = glob.glob(currentimagedir + '\\*sr_band6.tif')
+                                        swir2image = glob.glob(currentimagedir + '\\*sr_band7.tif')
+                                        scalefactor = 0.0001
 
-                                # select appropriate Landsat bands and apply conversion factor
-                                if satellite == '8':
-                                    blueimage = glob.glob(currentimagedir + '\\*sr_band2.tif')
-                                    greenimage = glob.glob(currentimagedir + '\\*sr_band3.tif')
-                                    redimage = glob.glob(currentimagedir + '\\*sr_band4.tif')
-                                    nirimage = glob.glob(currentimagedir + '\\*sr_band5.tif')
-                                    swir1image = glob.glob(currentimagedir + '\\*sr_band6.tif')
-                                    swir2image = glob.glob(currentimagedir + '\\*sr_band7.tif')
-                                    scalefactor = 0.0001
+                                    elif satellite == '5' or satellite == '7':
+                                        blueimage = glob.glob(currentimagedir + '\\*sr_band1.tif')
+                                        greenimage = glob.glob(currentimagedir + '\\*sr_band2.tif')
+                                        redimage = glob.glob(currentimagedir + '\\*sr_band3.tif')
+                                        nirimage = glob.glob(currentimagedir + '\\*sr_band4.tif')
+                                        swir1image = glob.glob(currentimagedir + '\\*sr_band5.tif')
+                                        swir2image = glob.glob(currentimagedir + '\\*sr_band7.tif')
+                                        scalefactor = 0.0001
 
-                                elif satellite == '5' or satellite == '7':
-                                    blueimage = glob.glob(currentimagedir + '\\*sr_band1.tif')
-                                    greenimage = glob.glob(currentimagedir + '\\*sr_band2.tif')
-                                    redimage = glob.glob(currentimagedir + '\\*sr_band3.tif')
-                                    nirimage = glob.glob(currentimagedir + '\\*sr_band4.tif')
-                                    swir1image = glob.glob(currentimagedir + '\\*sr_band5.tif')
-                                    swir2image = glob.glob(currentimagedir + '\\*sr_band7.tif')
-                                    scalefactor = 0.0001
+                                    else:
+                                        arcpy.AddMessage('Unknown Satellite Platform')
 
-                                else:
-                                    arcpy.AddMessage('Unknown Satellite Platform')
+                                if collection == 2:
+                                    # select appropriate Landsat bands and apply conversion factor
+                                    if satellite == '8':
+                                        blueimage = glob.glob(currentimagedir + '\\*B2.tif')
+                                        greenimage = glob.glob(currentimagedir + '\\*B3.tif')
+                                        redimage = glob.glob(currentimagedir + '\\*B4.tif')
+                                        nirimage = glob.glob(currentimagedir + '\\*B5.tif')
+                                        swir1image = glob.glob(currentimagedir + '\\*B6.tif')
+                                        swir2image = glob.glob(currentimagedir + '\\*B7.tif')
+                                        scalefactor = 0.0001
+
+                                    elif satellite == '5' or satellite == '7':
+                                        blueimage = glob.glob(currentimagedir + '\\*B1.tif')
+                                        greenimage = glob.glob(currentimagedir + '\\*B2.tif')
+                                        redimage = glob.glob(currentimagedir + '\\*B3.tif')
+                                        nirimage = glob.glob(currentimagedir + '\\*B4.tif')
+                                        swir1image = glob.glob(currentimagedir + '\\*B5.tif')
+                                        swir2image = glob.glob(currentimagedir + '\\*B7.tif')
+                                        scalefactor = 0.0001
+
+                                    else:
+                                        arcpy.AddMessage('Unknown Satellite Platform')
 
                                 arcpy.AddMessage("Calculating " + indexname + " for Landsat " + str(
                                     satellite) + " image " + currentimagename + ".")
