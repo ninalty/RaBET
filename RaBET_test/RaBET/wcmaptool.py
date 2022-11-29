@@ -409,8 +409,9 @@ class WCMapTool(object):
                         arcpy.env.snapRaster = cloudraster
 
                         # Define Pixel QA Band Mask Definitions - Includes Landsat 5 & 8 Defs
+                        # https://calekochenour.github.io/remote-sensing-textbook/01-catalog/chapter01-landsat.html
 
-                        clearmap = [[66, 0], [130, 0], [322, 0], [386, 0]]  # Class 0 - clear
+                        clearmap = [[66, 0], [130, 0], [322, 0], [386, 0], [21824, 0]]  # Class 0 - clear
 
                         watermap = [[68, 1], [132, 1], [324, 1], [388, 1]]  # Class 1 - water
 
@@ -420,7 +421,7 @@ class WCMapTool(object):
 
                         cloudmap = [[96, 4], [112, 4], [160, 4], [176, 4], [224, 4], [352, 4], [368, 4], [416, 4],
                                     [432, 4], [480, 4], [832, 4], [836, 4], [840, 4], [848, 4], [864, 4], [880, 4],
-                                    [900, 4], [904, 4], [912, 4], [928, 4], [944, 4], [992, 4]]  # Class 4 - cloud
+                                    [900, 4], [904, 4], [912, 4], [928, 4], [944, 4], [992, 4], [55052, 4]]  # Class 4 - cloud
 
                         # Reclass map of all class changes
                         classmap = clearmap + watermap + cloudshadowmap + snowmap + cloudmap
