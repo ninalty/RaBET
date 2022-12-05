@@ -110,7 +110,7 @@ class WCMapTool(object):
     #     return
 
     # def execute(self, parameters, messages):
-    def execute(self, parameters, collection):
+    def execute(self, parameters):
         """The source code of the tool."""
 
         # Version and update information
@@ -392,11 +392,11 @@ class WCMapTool(object):
                         processstarttime = time.time()
 
                         # Load cloud mask image from current directory as raster
-                        if collection == 1:
-                            cfmask = glob.glob(currentimagedir + '\\*pixel_qa.tif') # collection2
+                        cfmask1 = glob.glob(currentimagedir + '\\*pixel_qa.tif') # collection 1
 
-                        if collection == 2:
-                            cfmask = glob.glob(currentimagedir + '\\*QA_PIXEL.tif')
+                        cfmask2 = glob.glob(currentimagedir + '\\*QA_PIXEL.tif') # collection 2
+
+                        cfmask = cfmask2 or cfmask1
 
                         cloudraster = arcpy.Raster(cfmask[0])
 
@@ -590,6 +590,10 @@ class WCMapTool(object):
 
                             arcpy.AddMessage(
                                 "\n" + "Processing " + str(indexnumber) + " vegetation indices: " + indexstring + ". ")
+
+                            # check which collection is using
+                            collection = 1 if cfmask1 else 2
+
                             for indexname in indexlist: # collection2
                                 if collection == 1:
                                     # select appropriate Landsat bands and apply conversion factor
