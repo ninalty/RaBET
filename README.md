@@ -1,11 +1,7 @@
 # RaBET
 
-update from python 2.7 to 3.0
+This repository houses a Python toolbox of tools for preprocessing inputs and postprocessing outputs of the RaBET (Rangeland Brush Estimation Toolbox). To find out more about RaBET, please visit https://www.tucson.ars.ag.gov/unit/publications/PDFfiles/2271.pdf.
 
-Use Landsat Collection 2
+## Getting Started
+* Ensure you have [ArcGIS Pro](https://pro.arcgis.com/en/pro-app/latest/get-started/get-started.htm) installed.
 
-Increase computational efficiency
-
-Bring the code inline with PEP-8 Python standards and conventions.
-
-use zenodo on github, check with Chandra first.
