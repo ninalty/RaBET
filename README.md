@@ -5,7 +5,7 @@ This repository houses a Python toolbox of tools for preprocessing inputs and po
 ## Tools
 * RaBET_version_27 is the original code works exclusively for collection 1 level 2 Landsat images using ArcPY 2.7.
 * RaBET_version_30 is the modified code works for both collection 1 level 2 and collection 2 level 1 Landsat images using ArcPY 3.0.
-* 
+
 ## Getting Started
 * Ensure you have [ArcGIS Pro](https://pro.arcgis.com/en/pro-app/latest/get-started/get-started.htm) installed.
 * Download the toolbox and place it in an appropriate folder on your machine. Navigate to the folder in Catalog. If you expand all the toolsets, you will see the following:
