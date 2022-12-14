@@ -6,7 +6,6 @@ scripts_dir = os.path.join(os.path.dirname(__file__), 'scripts')
 sys.path.append(scripts_dir)
 
 from WCMapTool import WCMapTool
-from RaBETAnalysisTool import RaBETAnalysisTool
 
 class Toolbox(object):
     def __init__(self):
