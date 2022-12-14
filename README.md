@@ -1,6 +1,6 @@
 # RaBET
 
-This repository houses a Python toolbox of tools for preprocessing inputs and postprocessing outputs of the RaBET (Rangeland Brush Estimation Toolbox). To find out more about RaBET, please visit https://www.tucson.ars.ag.gov/unit/publications/PDFfiles/2271.pdf.
+This repository houses a Python toolbox of tools of the RaBET (Rangeland Brush Estimation Toolbox). To find out more about RaBET, please visit https://www.tucson.ars.ag.gov/unit/publications/PDFfiles/2271.pdf.
 
 ## Tools
 * RaBET_version_27 is the original code works exclusively for collection 1 level 2 Landsat images using ArcPY 2.7.
