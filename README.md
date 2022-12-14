@@ -15,3 +15,6 @@ This repository houses a Python toolbox of tools for preprocessing inputs and po
    * step 3 run Generate WC Maps tool.
  
    ![process](https://user-images.githubusercontent.com/35977606/207519976-7197616e-331a-4cce-8e58-1d6e2c34c7fe.JPG)
+
+## Development
+For any future developments, add new python script to scripts folder and update the .pyt file accordingly.
