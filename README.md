@@ -10,8 +10,8 @@ This repository houses a Python toolbox of tools for preprocessing inputs and po
 
 * In order to use the tool, you will need to have the following inputs available:
    * step 1 Under the working directory eg., RaBET_version30 with the following sub-folders: MLRA_41_test folder to hold the Landsat imagery; tooldata folder for shapefiles provided in this repository; output folder to save all outputs from RaBET toolbox. 
- * ![directory](https://user-images.githubusercontent.com/35977606/207519859-03492c92-c560-426b-84d7-ec7bc01d8ffd.JPG)
- * step 2 download Landsat test images and move it to MLRA_41_test folder.
+   * ![directory](https://user-images.githubusercontent.com/35977606/207519859-03492c92-c560-426b-84d7-ec7bc01d8ffd.JPG)
+   * step 2 download Landsat test images and move it to MLRA_41_test folder.
  * [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7430812.svg)](https://doi.org/10.5281/zenodo.7430812)
  * step 3 run Generate WC Maps tool.
  
