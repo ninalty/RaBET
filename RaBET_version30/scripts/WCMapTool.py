@@ -616,6 +616,7 @@ class WCMapTool(object):
                                         swir1image = glob.glob(currentimagedir + '\\*sr_band6.tif')
                                         swir2image = glob.glob(currentimagedir + '\\*sr_band7.tif')
                                         scalefactor = 0.0001
+                                        intercept = 0
 
                                     elif satellite == '5' or satellite == '7':
                                         blueimage = glob.glob(currentimagedir + '\\*sr_band1.tif')
@@ -625,7 +626,8 @@ class WCMapTool(object):
                                         swir1image = glob.glob(currentimagedir + '\\*sr_band5.tif')
                                         swir2image = glob.glob(currentimagedir + '\\*sr_band7.tif')
                                         scalefactor = 0.0001
-
+                                        intercept = 0
+                                        
                                     else:
                                         arcpy.AddMessage('Unknown Satellite Platform')
 
@@ -638,7 +640,8 @@ class WCMapTool(object):
                                         nirimage = glob.glob(currentimagedir + '\\*B5.tif')
                                         swir1image = glob.glob(currentimagedir + '\\*B6.tif')
                                         swir2image = glob.glob(currentimagedir + '\\*B7.tif')
-                                        scalefactor = 0.0001
+                                        scalefactor = 0.0000275
+                                        intercept = -0.2
 
                                     elif satellite == '5' or satellite == '7':
                                         blueimage = glob.glob(currentimagedir + '\\*B1.tif')
@@ -647,7 +650,8 @@ class WCMapTool(object):
                                         nirimage = glob.glob(currentimagedir + '\\*B4.tif')
                                         swir1image = glob.glob(currentimagedir + '\\*B5.tif')
                                         swir2image = glob.glob(currentimagedir + '\\*B7.tif')
-                                        scalefactor = 0.0001
+                                        scalefactor = 0.0000275
+                                        intercept = -0.2
 
                                     else:
                                         arcpy.AddMessage('Unknown Satellite Platform')
@@ -660,9 +664,9 @@ class WCMapTool(object):
                                     redband = arcpy.Raster(redimage[0])
                                     nirband = arcpy.Raster(nirimage[0])
                                     NLCDmask = arcpy.Raster(NLCDmaskloc)
-                                    VI = Con(cloudrasterRecl == 0, ((((2 * (scalefactor * nirband)) + 1) - (SquareRoot(
-                                        Square(2 * (scalefactor * nirband) + 1) - 8 * (
-                                                    (scalefactor * nirband) - (scalefactor * redband))))) / 2))
+                                    VI = Con(cloudrasterRecl == 0, ((((2 * (scalefactor * nirband + intercept)) + 1) - (SquareRoot(
+                                        Square(2 * (scalefactor * nirband + intercept) + 1) - 8 * (
+                                                    (scalefactor * nirband + intercept) - (scalefactor * redband + intercept))))) / 2))
                                     # Apply urban, barren, water, ag mask from NLCD image
                                     VImask = Con(NLCDmask == 1, VI)
                                 elif indexname == "GSATVI":
@@ -674,10 +678,10 @@ class WCMapTool(object):
                                     arcpy.AddMessage("Soil adjustment factor, L: " + str(L) + ".")
                                     # L = 0.1
                                     NLCDmask = arcpy.Raster(NLCDmaskloc)
-                                    VI = Con(cloudrasterRecl == 0, (((((scalefactor * nirband) - (
-                                                scalefactor * greenband)) / ((scalefactor * nirband) + (
-                                                scalefactor * greenband) + L)) * (1 + L)) - (
-                                                                                (scalefactor * swir1band) / 2)))
+                                    VI = Con(cloudrasterRecl == 0, (((((scalefactor * nirband + intercept) - (
+                                                scalefactor * greenband + intercept)) / ((scalefactor * nirband + intercept) + (
+                                                scalefactor * greenband + intercept) + L)) * (1 + L)) - (
+                                                                                (scalefactor * swir1band + intercept) / 2)))
                                     # Apply urban, barren, water, ag mask from NLCD image
                                     VImask = Con(NLCDmask == 1, VI)
                                 elif indexname == "NDI5":
@@ -685,8 +689,8 @@ class WCMapTool(object):
                                     swir1band = arcpy.Raster(swir1image[0])
                                     NLCDmask = arcpy.Raster(NLCDmaskloc)
                                     VI = Con(cloudrasterRecl == 0,
-                                             ((scalefactor * swir1band) - (scalefactor * nirband)) / (
-                                                         (scalefactor * swir1band) + (scalefactor * nirband)))
+                                             ((scalefactor * swir1band + intercept) - (scalefactor * nirband + intercept)) / (
+                                                         (scalefactor * swir1band + intercept) + (scalefactor * nirband + intercept)))
                                     # Apply urban, barren, water, ag mask from NLCD image
                                     VImask = Con(NLCDmask == 1, VI)
                                 elif indexname == "NDVI":
@@ -694,8 +698,8 @@ class WCMapTool(object):
                                     nirband = arcpy.Raster(nirimage[0])
                                     NLCDmask = arcpy.Raster(NLCDmaskloc)
                                     VI = Con(cloudrasterRecl == 0,
-                                             ((scalefactor * nirband) - (scalefactor * redband)) / (
-                                                         (scalefactor * nirband) + (scalefactor * redband)))
+                                             ((scalefactor * nirband + intercept) - (scalefactor * redband + intercept)) / (
+                                                         (scalefactor * nirband + intercept) + (scalefactor * redband + intercept)))
                                     # Apply urban, barren, water, ag mask from NLCD image
                                     VImask = Con(NLCDmask == 1, VI)
                                 elif indexname == "Constant":
@@ -710,7 +714,6 @@ class WCMapTool(object):
                                     VI = Con(cloudrasterRecl == 0, (redband) / (redband))
                                     # Apply urban, barren, water, ag mask from NLCD image
                                     VImask = Con(NLCDmask == 1, VI)
-
                                 else:
                                     arcpy.AddMessage("Vegetation index does not exist")
 
