@@ -1302,8 +1302,8 @@ class WCMapTool(object):
             arcpy.management.SaveToLayerFile(wclayertemp, wclayer, "RELATIVE", "CURRENT")
 
             try:
-                map_path = 'C:\\Users\\ninal\\Documents\\postdoc_UCDavis\\RaBET_v1\\RaBET_GIS\\RaBET.aprx' # TL need to remove
-                mxd = arcpy.mp.ArcGISProject(map_path)# mxd = arcpy.mp.ArcGISProject("CURRENT")
+                # map_path = 'C:\\Users\\ninal\\Documents\\postdoc_UCDavis\\RaBET_v1\\RaBET_GIS\\RaBET.aprx' # TL need to remove
+                mxd = arcpy.mp.ArcGISProject("CURRENT")# mxd = arcpy.mp.ArcGISProject(map_path)# 
                 dataFrame = mxd.listMaps("*")[0]
                 addlayer = arcpy.mp.LayerFile(wclayer)
                 dataFrame.addLayer(addlayer, 'TOP')
@@ -1411,7 +1411,7 @@ class WCMapTool(object):
                 # Add data to data frame
                 try:
                     map_path = 'C:\\Users\\ninal\\Documents\\postdoc_UCDavis\\RaBET_v1\\RaBET_GIS\\RaBET.aprx'
-                    mxd = arcpy.mp.ArcGISProject(map_path) # mxd = arcpy.mp.MapDocument("CURRENT")
+                    mxd = arcpy.mp.ArcGISProject("CURRENT") # mxd = arcpy.mp.ArcGISProject(map_path)
                     dataFrame = mxd.listMaps("*")[0]
                     addlayer = arcpy.mp.LayerFile(wclayer)
                     dataFrame.addLayer(addlayer, 'TOP') # arcpy.mp.AddLayer(dataFrame, addlayer, "TOP")
@@ -1590,8 +1590,8 @@ class WCMapTool(object):
 
             # Add data to data frame
             try:
-                map_path = 'C:\\Users\\ninal\\Documents\\postdoc_UCDavis\\RaBET_v1\\RaBET_GIS\\RaBET.aprx'
-                mxd = arcpy.mp.ArcGISProject(map_path) # mxd = arcpy.mp.MapDocument("CURRENT")
+                # map_path = 'C:\\Users\\ninal\\Documents\\postdoc_UCDavis\\RaBET_v1\\RaBET_GIS\\RaBET.aprx'
+                mxd = arcpy.mp.ArcGISProject("CURRENT") # mxd = arcpy.mp.ArcGISProject(map_path) 
                 dataFrame = mxd.listMaps("*")[0]
                 newlayer = arcpy.mp.LayerFile(metalayer + ".lyrx")
                 dataFrame.addLayer(newlayer, 'TOP') # arcpy.mp.AddLayer(dataFrame, newlayer, "TOP")
@@ -1620,7 +1620,13 @@ class WCMapTool(object):
                 arcpy.AddWarning("Error adding layer to dataframe. Layer can be added from output directory")
                 pass
         PackageOut = wclayer[:-5] + '.lpkx'
-        PackageLayers = [addlayer, layer]
+
+        try:
+            PackageLayers = [addlayer, layer]
+
+        except:
+            PackageLayers = [addlayer]
+
         arcpy.management.PackageLayer(PackageLayers, PackageOut, "PRESERVE", "CONVERT_ARCSDE", "#", "ALL", "ALL",
                                       "CURRENT", "#", "RaBETv7", "RaBETv7")
 
